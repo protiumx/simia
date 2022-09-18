@@ -1,6 +1,10 @@
 package lexer
 
-import "protiumx.dev/simia/token"
+import (
+	"fmt"
+
+	"protiumx.dev/simia/token"
+)
 
 type Lexer struct {
 	input          string
@@ -22,13 +26,13 @@ func (l *Lexer) NextToken() token.Token {
 	var ret token.Token
 	switch l.currentChar {
 	case '=':
-		ret = newToken(token.ASSIGN, l.currentChar)
+		ret = l.getOneOrTwoCharToken('=', token.ASSIGN, token.EQ)
+	case '!':
+		ret = l.getOneOrTwoCharToken('=', token.BANG, token.NOT_EQ)
 	case '+':
 		ret = newToken(token.PLUS, l.currentChar)
 	case '-':
 		ret = newToken(token.MINUS, l.currentChar)
-	case '!':
-		ret = newToken(token.BANG, l.currentChar)
 	case '/':
 		ret = newToken(token.SLASH, l.currentChar)
 	case '*':
@@ -103,6 +107,22 @@ func (l *Lexer) consumeWhiteSpace() {
 	for l.currentChar == ' ' || l.currentChar == '\t' || l.currentChar == '\n' || l.currentChar == '\r' {
 		l.readChar()
 	}
+}
+
+func (l *Lexer) peekChar() byte {
+	if l.readPotition >= len(l.input) {
+		return 0
+	}
+	return l.input[l.readPotition]
+}
+
+func (l *Lexer) getOneOrTwoCharToken(secondChar byte, oneCharType, twoCharType token.TokenType) token.Token {
+	if l.peekChar() == secondChar {
+		char := l.currentChar
+		l.readChar()
+		return token.Token{Type: twoCharType, Literal: fmt.Sprintf("%c%c", char, l.currentChar)}
+	}
+	return newToken(oneCharType, l.currentChar)
 }
 
 func isLetter(char byte) bool {
