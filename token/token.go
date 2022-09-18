@@ -29,7 +29,19 @@ const (
 	LET      = "LET"
 )
 
+var keywords = map[string]TokenType{
+	"fn":  FUNCTION,
+	"let": LET,
+}
+
 type Token struct {
 	Type    TokenType
 	Literal string
+}
+
+func GetIdentifierType(ident string) TokenType {
+	if t, ok := keywords[ident]; ok {
+		return t
+	}
+	return IDENT
 }
