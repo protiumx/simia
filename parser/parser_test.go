@@ -18,7 +18,7 @@ func TestLetStatement(t *testing.T) {
 	p := New(l)
 
 	program := p.ParseProgram()
-	checParserErrors(t, p)
+	checkParserErrors(t, p)
 	if program == nil {
 		t.Fatal("ParseProgram() returned nil")
 	}
@@ -65,7 +65,7 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 	return true
 }
 
-func checParserErrors(t *testing.T, p *Parser) {
+func checkParserErrors(t *testing.T, p *Parser) {
 	errors := p.Errors()
 	if len(errors) == 0 {
 		return
@@ -88,7 +88,7 @@ func TestReturnStatement(t *testing.T) {
 	p := New(l)
 
 	program := p.ParseProgram()
-	checParserErrors(t, p)
+	checkParserErrors(t, p)
 
 	if len(program.Statements) != 3 {
 		t.Fatalf("program.Statements does not contain 3 statements. got=%d", len(program.Statements))
@@ -103,5 +103,35 @@ func TestReturnStatement(t *testing.T) {
 		if retStmt.TokenLiteral() != "return" {
 			t.Errorf("incorrect token literal. got=%q", retStmt.TokenLiteral())
 		}
+	}
+}
+
+func TestIdentifierExpression(t *testing.T) {
+	input := "foobar;"
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program has not enough statements. got=%d", len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatment)
+	if !ok {
+		t.Fatalf("cannot cast program.Statements[0] as ast.ExpressionStatment. got=%T", program.Statements[0])
+	}
+
+	ident, ok := stmt.Expression.(*ast.Identifier)
+	if !ok {
+		t.Fatalf("cannot cast expression as ast.Identifier. got=%T", stmt.Expression)
+	}
+
+	if ident.Value != "foobar" {
+		t.Errorf("wrong identifier value. expeted=foobar, got=%s", ident.Value)
+	}
+
+	if ident.TokenLiteral() != "foobar" {
+		t.Errorf("wrong TokenLiteral value. expeted=foobar, got=%s", ident.TokenLiteral())
 	}
 }
