@@ -40,6 +40,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
 	p.registerPrefix(token.INT, p.parseIntegerLiteral)
+	p.registerPrefix(token.BANG, p.parsePrefixExpression)
+	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
 
 	// Set values for current and peak
 	p.nextToken()
@@ -115,8 +117,8 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatment {
 	return stmt
 }
 
-func (p *Parser) parseExpressionStatement() *ast.ExpressionStatment {
-	stmt := &ast.ExpressionStatment{Token: p.currentToken}
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	stmt := &ast.ExpressionStatement{Token: p.currentToken}
 	stmt.Expression = p.parseExpression(LOWEST)
 	if p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
@@ -128,6 +130,7 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatment {
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFns[p.currentToken.Type]
 	if prefix == nil {
+		p.missingPrefixParseFn(p.currentToken.Type)
 		return nil
 	}
 
@@ -147,6 +150,17 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	}
 	literal.Value = value
 	return literal
+}
+
+func (p *Parser) parsePrefixExpression() ast.Expression {
+	exp := &ast.PrefixExpression{
+		Token:    p.currentToken,
+		Operator: p.currentToken.Literal,
+	}
+	p.nextToken()
+
+	exp.Right = p.parseExpression(PREFIX)
+	return exp
 }
 
 func (p *Parser) currentTokenIs(t token.TokenType) bool {
@@ -169,4 +183,8 @@ func (p *Parser) expectPeek(t token.TokenType) bool {
 
 func (p *Parser) peekError(expectedToken token.TokenType) {
 	p.errors = append(p.errors, fmt.Sprintf("expected next token to be %s, got %s", expectedToken, p.peekToken.Type))
+}
+
+func (p *Parser) missingPrefixParseFn(t token.TokenType) {
+	p.errors = append(p.errors, fmt.Sprintf("no prefix parse function for %s found", t))
 }

@@ -97,22 +97,44 @@ func (rs *ReturnStatment) String() string {
 	return out.String()
 }
 
-type ExpressionStatment struct {
+type ExpressionStatement struct {
 	Token      token.Token // firs token of the expression
 	Expression Expression
 }
 
-func (es *ExpressionStatment) statementNode() {}
+func (es *ExpressionStatement) statementNode() {}
 
-func (es *ExpressionStatment) TokenLiteral() string {
+func (es *ExpressionStatement) TokenLiteral() string {
 	return es.Token.Literal
 }
 
-func (es *ExpressionStatment) String() string {
+func (es *ExpressionStatement) String() string {
 	if es.Expression != nil {
 		return es.Expression.String()
 	}
 	return ""
+}
+
+type PrefixExpression struct {
+	Token    token.Token // prefix
+	Operator string
+	Right    Expression
+}
+
+func (pe *PrefixExpression) expressionNode() {}
+
+func (pe *PrefixExpression) TokenLiteral() string {
+	return pe.Token.Literal
+}
+
+func (pe *PrefixExpression) String() string {
+	var out strings.Builder
+	out.WriteString("(")
+	out.WriteString(pe.Operator)
+	out.WriteString(pe.Right.String())
+	out.WriteString(")")
+
+	return out.String()
 }
 
 // Root node
