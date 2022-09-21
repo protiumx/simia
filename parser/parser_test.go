@@ -135,3 +135,33 @@ func TestIdentifierExpression(t *testing.T) {
 		t.Errorf("wrong TokenLiteral value. expeted=foobar, got=%s", ident.TokenLiteral())
 	}
 }
+
+func TestIntigerLiteralExpression(t *testing.T) {
+	input := "0;"
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program has not enough statements. got=%d", len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatment)
+	if !ok {
+		t.Fatalf("cannot cast program.Statements[0] as ast.ExpressionStatment. got=%T", program.Statements[0])
+	}
+
+	literal, ok := stmt.Expression.(*ast.IntigerLiteral)
+	if !ok {
+		t.Fatalf("cannot cast expression as ast.IntigerLiteral. got=%T", stmt.Expression)
+	}
+
+	if literal.Value != 0 {
+		t.Errorf("wrong identifier value. expeted=0, got=%d", literal.Value)
+	}
+
+	if literal.TokenLiteral() != "0" {
+		t.Errorf("wrong TokenLiteral value. expeted=0, got=%s", literal.TokenLiteral())
+	}
+}

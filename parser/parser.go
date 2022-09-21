@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 
 	"protiumx.dev/simia/ast"
 	"protiumx.dev/simia/lexer"
@@ -38,6 +39,7 @@ func New(l *lexer.Lexer) *Parser {
 	p := Parser{lexer: l, errors: []string{}}
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
+	p.registerPrefix(token.INT, p.parseIntegerLiteral)
 
 	// Set values for current and peak
 	p.nextToken()
@@ -134,6 +136,17 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 
 func (p *Parser) parseIdentifier() ast.Expression {
 	return &ast.Identifier{Token: p.currentToken, Value: p.currentToken.Literal}
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+	literal := &ast.IntigerLiteral{Token: p.currentToken}
+	value, err := strconv.ParseInt(p.currentToken.Literal, 0, 64)
+	if err != nil {
+		p.errors = append(p.errors, fmt.Sprintf("could not parse %q as integer", p.currentToken))
+		return nil
+	}
+	literal.Value = value
+	return literal
 }
 
 func (p *Parser) currentTokenIs(t token.TokenType) bool {
