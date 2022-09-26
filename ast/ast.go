@@ -91,18 +91,18 @@ func (ls *LetStatement) String() string {
 	return out.String()
 }
 
-type ReturnStatment struct {
+type ReturnStatement struct {
 	Token       token.Token
 	ReturnValue Expression
 }
 
-func (rs *ReturnStatment) statementNode() {}
+func (rs *ReturnStatement) statementNode() {}
 
-func (rs *ReturnStatment) TokenLiteral() string {
+func (rs *ReturnStatement) TokenLiteral() string {
 	return rs.Token.Literal
 }
 
-func (rs *ReturnStatment) String() string {
+func (rs *ReturnStatement) String() string {
 	var out strings.Builder
 	out.WriteString(rs.TokenLiteral() + " ")
 	if rs.ReturnValue != nil {
@@ -153,6 +153,33 @@ func (ie *IfExpression) String() string {
 		out.WriteString("else ")
 		out.WriteString(ie.Alternative.String())
 	}
+	return out.String()
+}
+
+type FunctionLiteral struct {
+	Token      token.Token
+	Parameters []*Identifier
+	Body       *BlockStatment
+}
+
+func (fl *FunctionLiteral) expressionNode() {}
+
+func (fl *FunctionLiteral) TokenLiteral() string {
+	return fl.Token.Literal
+}
+
+func (fl *FunctionLiteral) String() string {
+	var out strings.Builder
+	params := make([]string, len(fl.Parameters))
+	for i, p := range fl.Parameters {
+		params[i] = p.String()
+	}
+
+	out.WriteString(fl.TokenLiteral())
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(") ")
+	out.WriteString(fl.Body.String())
 	return out.String()
 }
 
