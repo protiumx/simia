@@ -7,7 +7,7 @@ type ValueType string
 const (
 	INTEGER_VALUE ValueType = "INTEGER"
 	BOOLEAN_VALUE ValueType = "BOOLEAN"
-	NONE_VALUE    ValueType = "NONE"
+	NIL_VALUE     ValueType = "NIL"
 )
 
 type Value interface {
@@ -39,12 +39,12 @@ func (b *Boolean) Type() ValueType {
 	return BOOLEAN_VALUE
 }
 
-type None struct{}
+type Nil struct{}
 
-func (n *None) Inspect() string {
-	return "null"
+func (n *Nil) Inspect() string {
+	return "nil"
 }
 
-func (n *None) Type() ValueType {
-	return NONE_VALUE
+func (n *Nil) Type() ValueType {
+	return NIL_VALUE
 }
