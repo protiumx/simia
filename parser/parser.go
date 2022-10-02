@@ -9,7 +9,7 @@ import (
 	"protiumx.dev/simia/token"
 )
 
-// Precedences
+// Precedence
 const (
 	LOWEST = iota + 1
 	EQUALS

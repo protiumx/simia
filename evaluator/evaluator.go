@@ -5,6 +5,12 @@ import (
 	"protiumx.dev/simia/value"
 )
 
+var (
+	NIL   = &value.Nil{}
+	TRUE  = &value.Boolean{Value: true}
+	FALSE = &value.Boolean{Value: false}
+)
+
 func Eval(node ast.Node) value.Value {
 	switch node := node.(type) {
 	case *ast.Program:
@@ -13,9 +19,21 @@ func Eval(node ast.Node) value.Value {
 		return Eval(node.Expression)
 	case *ast.IntegerLiteral:
 		return &value.Integer{Value: node.Value}
+	case *ast.Boolean:
+		return evalBoolean(node.Value)
+	case *ast.PrefixExpression:
+		right := Eval(node.Right)
+		return evalPrefixExpression(node.Operator, right)
 	}
 
 	return nil
+}
+
+func evalBoolean(input bool) *value.Boolean {
+	if input {
+		return TRUE
+	}
+	return FALSE
 }
 
 func evalStatements(stmts []ast.Statement) value.Value {
@@ -24,4 +42,37 @@ func evalStatements(stmts []ast.Statement) value.Value {
 		ret = Eval(stmt)
 	}
 	return ret
+}
+
+func evalPrefixExpression(operator string, right value.Value) value.Value {
+	switch operator {
+	case "!":
+		return evalBangOperator(right)
+	case "-":
+		return evalMinusPrefixOperatorExpression(right)
+	default:
+		return NIL
+	}
+}
+
+func evalBangOperator(right value.Value) value.Value {
+	switch right {
+	case TRUE:
+		return FALSE
+	case FALSE:
+		return TRUE
+	case NIL:
+		// TODO: remove this in favour of option type
+		return TRUE
+	default:
+		return FALSE
+	}
+}
+
+func evalMinusPrefixOperatorExpression(right value.Value) value.Value {
+	if right.Type() != value.INTEGER_VALUE {
+		return NIL
+	}
+	val := right.(*value.Integer).Value
+	return &value.Integer{Value: -val}
 }
