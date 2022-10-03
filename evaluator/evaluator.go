@@ -20,16 +20,20 @@ func Eval(node ast.Node) value.Value {
 	case *ast.IntegerLiteral:
 		return &value.Integer{Value: node.Value}
 	case *ast.Boolean:
-		return evalBoolean(node.Value)
+		return booleanValue(node.Value)
 	case *ast.PrefixExpression:
 		right := Eval(node.Right)
 		return evalPrefixExpression(node.Operator, right)
+	case *ast.InfixExpression:
+		left := Eval(node.Left)
+		right := Eval(node.Right)
+		return evalInfixExpression(node.Operator, left, right)
 	}
 
 	return nil
 }
 
-func evalBoolean(input bool) *value.Boolean {
+func booleanValue(input bool) *value.Boolean {
 	if input {
 		return TRUE
 	}
@@ -55,6 +59,20 @@ func evalPrefixExpression(operator string, right value.Value) value.Value {
 	}
 }
 
+func evalInfixExpression(op string, left value.Value, right value.Value) value.Value {
+	if left.Type() == value.INTEGER_VALUE && right.Type() == value.INTEGER_VALUE {
+		return evalIntegerInfixExpression(op, left, right)
+	}
+	// Use pointer comparison for boolean values
+	switch op {
+	case "==":
+		return booleanValue(left == right)
+	case "!=":
+		return booleanValue(left != right)
+	}
+	return NIL
+}
+
 func evalBangOperator(right value.Value) value.Value {
 	switch right {
 	case TRUE:
@@ -75,4 +93,30 @@ func evalMinusPrefixOperatorExpression(right value.Value) value.Value {
 	}
 	val := right.(*value.Integer).Value
 	return &value.Integer{Value: -val}
+}
+
+func evalIntegerInfixExpression(op string, left, right value.Value) value.Value {
+	leftVal := left.(*value.Integer).Value
+	rightVal := right.(*value.Integer).Value
+
+	switch op {
+	case "+":
+		return &value.Integer{Value: leftVal + rightVal}
+	case "-":
+		return &value.Integer{Value: leftVal - rightVal}
+	case "*":
+		return &value.Integer{Value: leftVal * rightVal}
+	case "/":
+		return &value.Integer{Value: leftVal / rightVal}
+	case "<":
+		return booleanValue(leftVal < rightVal)
+	case ">":
+		return booleanValue(leftVal > rightVal)
+	case "==":
+		return booleanValue(leftVal == rightVal)
+	case "!=":
+		return booleanValue(leftVal != rightVal)
+	default:
+		return NIL
+	}
 }
