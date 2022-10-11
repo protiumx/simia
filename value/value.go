@@ -6,8 +6,10 @@ type ValueType string
 
 const (
 	INTEGER_VALUE ValueType = "INTEGER"
-	BOOLEAN_VALUE ValueType = "BOOLEAN"
-	NIL_VALUE     ValueType = "NIL"
+	BOOLEAN_VALUE           = "BOOLEAN"
+	NIL_VALUE               = "NIL"
+	RETURN_VALUE            = "RETURN"
+	ERROR_VALUE             = "ERROR"
 )
 
 type Value interface {
@@ -47,4 +49,14 @@ func (n *Nil) Inspect() string {
 
 func (n *Nil) Type() ValueType {
 	return NIL_VALUE
+}
+
+type Return struct {
+	Value Value
+}
+
+func (r *Return) Type() ValueType { return RETURN_VALUE }
+
+func (r *Return) Inspect() string {
+	return r.Value.Inspect()
 }
