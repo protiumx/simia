@@ -119,3 +119,34 @@ func TestBangOperator(t *testing.T) {
 		testBooleanValue(t, evaluated, tt.expected)
 	}
 }
+
+func TestIfElseExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected any
+	}{
+		{"if (true) { 10 }", 10},
+		{"if (false) { 10 }", nil},
+		{"if (1) { 10 }", 10},
+		{"if (1 < 2) { 10 }", 10},
+		{"if (1 > 2) { 10 }", nil},
+		{"if (1 > 2) { 10 } else { 20 }", 20},
+	}
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		integer, ok := tt.expected.(int)
+		if ok {
+			testIntegerValue(t, evaluated, int64(integer))
+		} else {
+			testNilValue(t, evaluated)
+		}
+	}
+}
+
+func testNilValue(t *testing.T, val value.Value) bool {
+	if val != NIL {
+		t.Errorf("value is not NIL. got=%T (%+v)", val, val)
+		return false
+	}
+	return true
+}
