@@ -1,6 +1,8 @@
 package evaluator
 
 import (
+	"fmt"
+
 	"protiumx.dev/simia/ast"
 	"protiumx.dev/simia/value"
 )
@@ -23,10 +25,20 @@ func Eval(node ast.Node) value.Value {
 		return booleanValue(node.Value)
 	case *ast.PrefixExpression:
 		right := Eval(node.Right)
+		if isError(right) {
+			return right
+		}
 		return evalPrefixExpression(node.Operator, right)
 	case *ast.InfixExpression:
 		left := Eval(node.Left)
+		if isError(left) {
+			return left
+		}
+
 		right := Eval(node.Right)
+		if isError(right) {
+			return right
+		}
 		return evalInfixExpression(node.Operator, left, right)
 	case *ast.BlockStatment:
 		return evalBlockStatement(node)
@@ -34,6 +46,9 @@ func Eval(node ast.Node) value.Value {
 		return evalIfExpression(node)
 	case *ast.ReturnStatement:
 		val := Eval(node.ReturnValue)
+		if isError(val) {
+			return val
+		}
 		return &value.Return{Value: val}
 	}
 
@@ -52,8 +67,11 @@ func evalProgram(program *ast.Program) value.Value {
 	for _, stmt := range program.Statements {
 		ret = Eval(stmt)
 
-		if returnVal, ok := ret.(*value.Return); ok {
-			return returnVal.Value
+		switch retType := ret.(type) {
+		case *value.Return:
+			return retType.Value
+		case *value.Error:
+			return retType
 		}
 	}
 	return ret
@@ -63,8 +81,11 @@ func evalBlockStatement(block *ast.BlockStatment) value.Value {
 	var ret value.Value
 	for _, stmt := range block.Statements {
 		ret = Eval(stmt)
-		if ret != nil && ret.Type() == value.RETURN_VALUE {
-			return ret
+		if ret != nil {
+			retType := ret.Type()
+			if retType == value.RETURN_VALUE || retType == value.ERROR_VALUE {
+				return ret
+			}
 		}
 	}
 	return ret
@@ -77,23 +98,28 @@ func evalPrefixExpression(operator string, right value.Value) value.Value {
 	case "-":
 		return evalMinusPrefixOperatorExpression(right)
 	default:
-		return NIL
+		return newError("unknown operator: %s%s", operator, right.Type())
 	}
 }
 
 func evalInfixExpression(op string, left value.Value, right value.Value) value.Value {
+	if left.Type() != right.Type() {
+		return newError("type mismatch: %s %s %s", left.Type(), op, right.Type())
+	}
+
 	if left.Type() == value.INTEGER_VALUE && right.Type() == value.INTEGER_VALUE {
 		return evalIntegerInfixExpression(op, left, right)
 	}
+
 	// Use pointer comparison for boolean values
 	switch op {
 	case "==":
 		return booleanValue(left == right)
 	case "!=":
 		return booleanValue(left != right)
+	default:
+		return newError("unknown operator: %s %s %s", left.Type(), op, right.Type())
 	}
-
-	return NIL
 }
 
 func evalBangOperator(right value.Value) value.Value {
@@ -112,8 +138,9 @@ func evalBangOperator(right value.Value) value.Value {
 
 func evalMinusPrefixOperatorExpression(right value.Value) value.Value {
 	if right.Type() != value.INTEGER_VALUE {
-		return NIL
+		return newError("unknown operator: -%s", right.Type())
 	}
+
 	val := right.(*value.Integer).Value
 	return &value.Integer{Value: -val}
 }
@@ -140,12 +167,16 @@ func evalIntegerInfixExpression(op string, left, right value.Value) value.Value 
 	case "!=":
 		return booleanValue(leftVal != rightVal)
 	default:
-		return NIL
+		return newError("unknown operator: %s %s %s", left.Type(), op, right.Type())
 	}
 }
 
 func evalIfExpression(ie *ast.IfExpression) value.Value {
 	condition := Eval(ie.Condition)
+	if isError(condition) {
+		return condition
+	}
+
 	if isTruthy(condition) {
 		return Eval(ie.Consequence)
 	} else if ie.Alternative != nil {
@@ -164,4 +195,12 @@ func isTruthy(val value.Value) bool {
 	default:
 		return true
 	}
+}
+
+func newError(format string, args ...any) *value.Error {
+	return &value.Error{Message: fmt.Sprintf(format, args...)}
+}
+
+func isError(val value.Value) bool {
+	return val != nil && val.Type() == value.ERROR_VALUE
 }

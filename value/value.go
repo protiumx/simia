@@ -60,3 +60,16 @@ func (r *Return) Type() ValueType { return RETURN_VALUE }
 func (r *Return) Inspect() string {
 	return r.Value.Inspect()
 }
+
+// TODO: add line and column
+type Error struct {
+	Message string
+}
+
+func (e *Error) Type() ValueType {
+	return ERROR_VALUE
+}
+
+func (e *Error) Inspect() string {
+	return "ERROR: " + e.Message
+}
