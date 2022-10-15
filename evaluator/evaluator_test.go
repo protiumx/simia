@@ -39,7 +39,8 @@ func testEval(input string) value.Value {
 	l := lexer.New(input)
 	p := parser.New(l)
 	program := p.ParseProgram()
-	return Eval(program)
+	env := value.NewEnvironment()
+	return Eval(program, env)
 }
 
 func testIntegerValue(t *testing.T, val value.Value, expected int64) bool {
@@ -214,6 +215,10 @@ func TestErrorHandling(t *testing.T) {
     `,
 			"unknown operator: BOOLEAN + BOOLEAN",
 		},
+		{
+			"foo;",
+			"identifier not found: foo",
+		},
 	}
 	for _, tt := range tests {
 		evaluated := testEval(tt.input)
@@ -225,5 +230,20 @@ func TestErrorHandling(t *testing.T) {
 		if err.Message != tt.expectedMessage {
 			t.Errorf("wrong error message. expected=%q, got=%q", tt.expectedMessage, err.Message)
 		}
+	}
+}
+
+func TestLetStatements(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"let a = 5; a;", 5},
+		{"let a = 5 * 5; a;", 25},
+		{"let a = 5; let b = a; b;", 5},
+		{"let a = 5; let b = a; let c = a + b + 5; c;", 15},
+	}
+	for _, tt := range tests {
+		testIntegerValue(t, testEval(tt.input), tt.expected)
 	}
 }
