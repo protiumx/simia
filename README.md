@@ -8,9 +8,14 @@ Go implementation of the Monkey language interpreter from the book [Writing an i
 
 ## TODO
 - [  ] Add `collumn` and `line` numbers
+- [  ] Implement `array` with spread `...` operator
 - [  ] Support piping like in Elixir (|>)
+- [  ] Produce bytecode and implement VM
+- [  ] Implement `Option` as in `rust` and remove `None`
 
-## MIT License
+## License
+
+MIT License
 
 Copyright (c) 2022 Brian Mayo
 

@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"io"
 
+	"protiumx.dev/simia/evaluator"
 	"protiumx.dev/simia/lexer"
 	"protiumx.dev/simia/parser"
+	"protiumx.dev/simia/value"
 )
 
 const PROMPT = ">>"
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
+	env := value.NewEnvironment(nil)
 
 	for {
 		fmt.Printf(PROMPT)
@@ -31,8 +34,11 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		io.WriteString(out, program.String())
-		io.WriteString(out, "\n")
+		evaluated := evaluator.Eval(program, env)
+		if evaluated != nil {
+			io.WriteString(out, evaluated.Inspect())
+			io.WriteString(out, "\n")
+		}
 	}
 }
 
