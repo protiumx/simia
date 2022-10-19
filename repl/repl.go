@@ -15,7 +15,7 @@ const PROMPT = ">>"
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
-	env := value.NewEnvironment()
+	env := value.NewEnvironment(nil)
 
 	for {
 		fmt.Printf(PROMPT)

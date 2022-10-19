@@ -1,15 +1,21 @@
 package value
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"protiumx.dev/simia/ast"
+)
 
 type ValueType string
 
 const (
-	INTEGER_VALUE ValueType = "INTEGER"
-	BOOLEAN_VALUE           = "BOOLEAN"
-	NIL_VALUE               = "NIL"
-	RETURN_VALUE            = "RETURN"
-	ERROR_VALUE             = "ERROR"
+	INTEGER_VALUE  ValueType = "INTEGER"
+	BOOLEAN_VALUE            = "BOOLEAN"
+	NIL_VALUE                = "NIL"
+	RETURN_VALUE             = "RETURN"
+	ERROR_VALUE              = "ERROR"
+	FUNCTION_VALUE           = "FN"
 )
 
 type Value interface {
@@ -72,4 +78,31 @@ func (e *Error) Type() ValueType {
 
 func (e *Error) Inspect() string {
 	return "ERROR: " + e.Message
+}
+
+type Function struct {
+	Parameters []*ast.Identifier
+	Body       *ast.BlockStatment
+	Env        *Environment
+}
+
+func (fn *Function) Type() ValueType {
+	return FUNCTION_VALUE
+}
+
+func (fn *Function) Inspect() string {
+	var out strings.Builder
+	params := make([]string, len(fn.Parameters))
+	for i, p := range fn.Parameters {
+		params[i] = p.String()
+	}
+
+	out.WriteString("fn")
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ","))
+	out.WriteString(") {\n")
+	out.WriteString(fn.Body.String())
+	out.WriteString("\n}")
+
+	return out.String()
 }

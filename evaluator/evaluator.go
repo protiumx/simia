@@ -58,6 +58,20 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 		env.Set(node.Name.Value, val)
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
+	case *ast.FunctionLiteral:
+		params := node.Parameters
+		body := node.Body
+		return &value.Function{Parameters: params, Env: env, Body: body}
+	case *ast.CallExpression:
+		fn := Eval(node.Function, env)
+		if isError(fn) {
+			return fn
+		}
+		args := evalExpressions(node.Arguments, env)
+		if len(args) == 1 && isError(args[0]) {
+			return args[0]
+		}
+		return applyFunction(fn, args)
 	}
 
 	return nil
@@ -199,6 +213,50 @@ func evalIdentifier(node *ast.Identifier, env *value.Environment) value.Value {
 	if !ok {
 		return newError("identifier not found: " + node.Value)
 	}
+	return val
+}
+
+func evalExpressions(exps []ast.Expression, env *value.Environment) []value.Value {
+	ret := make([]value.Value, len(exps))
+
+	for i, exp := range exps {
+		evaluated := Eval(exp, env)
+		if isError(evaluated) {
+			return []value.Value{evaluated}
+		}
+
+		ret[i] = evaluated
+	}
+
+	return ret
+}
+
+func applyFunction(fnValue value.Value, args []value.Value) value.Value {
+	fn, ok := fnValue.(*value.Function)
+	if !ok {
+		return newError("not a function: %s", fnValue.Type())
+	}
+
+	fnEnv := extendFunctionEnv(fn, args)
+	evaluated := Eval(fn.Body, fnEnv)
+	return unwrapReturnValue(evaluated)
+}
+
+func extendFunctionEnv(fn *value.Function, args []value.Value) *value.Environment {
+	env := value.NewEnvironment(fn.Env)
+
+	for i, param := range fn.Parameters {
+		env.Set(param.Value, args[i])
+	}
+
+	return env
+}
+
+func unwrapReturnValue(val value.Value) value.Value {
+	if ret, ok := val.(*value.Return); ok {
+		return ret.Value
+	}
+
 	return val
 }
 
