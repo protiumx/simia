@@ -212,11 +212,15 @@ func evalIfExpression(ie *ast.IfExpression, env *value.Environment) value.Value 
 }
 
 func evalIdentifier(node *ast.Identifier, env *value.Environment) value.Value {
-	val, ok := env.Get(node.Value)
-	if !ok {
-		return newError("identifier not found: " + node.Value)
+	if val, ok := env.Get(node.Value); ok {
+		return val
 	}
-	return val
+
+	if builtin, ok := builtins[node.Value]; ok {
+		return builtin
+	}
+
+	return newError("identifier not found: " + node.Value)
 }
 
 func evalExpressions(exps []ast.Expression, env *value.Environment) []value.Value {
@@ -245,14 +249,16 @@ func evalStringInfixExpression(op string, left, right value.Value) value.Value {
 }
 
 func applyFunction(fnValue value.Value, args []value.Value) value.Value {
-	fn, ok := fnValue.(*value.Function)
-	if !ok {
+	switch fn := fnValue.(type) {
+	case *value.Function:
+		fnEnv := extendFunctionEnv(fn, args)
+		evaluated := Eval(fn.Body, fnEnv)
+		return unwrapReturnValue(evaluated)
+	case *value.Builtin:
+		return fn.Fn(args...)
+	default:
 		return newError("not a function: %s", fnValue.Type())
 	}
-
-	fnEnv := extendFunctionEnv(fn, args)
-	evaluated := Eval(fn.Body, fnEnv)
-	return unwrapReturnValue(evaluated)
 }
 
 func extendFunctionEnv(fn *value.Function, args []value.Value) *value.Environment {

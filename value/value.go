@@ -17,6 +17,7 @@ const (
 	RETURN_VALUE             = "RETURN"
 	ERROR_VALUE              = "ERROR"
 	FUNCTION_VALUE           = "FN"
+	BUILTIN_VALUE            = "BUILTIN"
 )
 
 type Value interface {
@@ -118,4 +119,18 @@ func (fn *Function) Inspect() string {
 	out.WriteString("\n}")
 
 	return out.String()
+}
+
+type BuiltinFunction func(args ...Value) Value
+
+type Builtin struct {
+	Fn BuiltinFunction
+}
+
+func (b *Builtin) Type() ValueType {
+	return BUILTIN_VALUE
+}
+
+func (b *Builtin) Inspect() string {
+	return "builtin function"
 }
