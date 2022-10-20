@@ -11,6 +11,7 @@ type ValueType string
 
 const (
 	INTEGER_VALUE  ValueType = "INTEGER"
+	STRING_VALUE             = "STRING"
 	BOOLEAN_VALUE            = "BOOLEAN"
 	NIL_VALUE                = "NIL"
 	RETURN_VALUE             = "RETURN"
@@ -33,6 +34,18 @@ func (i *Integer) Inspect() string {
 
 func (i *Integer) Type() ValueType {
 	return INTEGER_VALUE
+}
+
+type String struct {
+	Value string
+}
+
+func (s *String) Type() ValueType {
+	return STRING_VALUE
+}
+
+func (s *String) Inspect() string {
+	return s.Value
 }
 
 type Boolean struct {

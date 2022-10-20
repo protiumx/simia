@@ -53,6 +53,9 @@ func (l *Lexer) NextToken() token.Token {
 		ret = newToken(token.LBRACE, l.currentChar)
 	case '}':
 		ret = newToken(token.RBRACE, l.currentChar)
+	case '"':
+		ret.Type = token.STRING
+		ret.Literal = l.readString()
 	case 0:
 		ret.Literal = ""
 		ret.Type = token.EOF
@@ -99,6 +102,23 @@ func (l *Lexer) readNumber() string {
 	position := l.currentPostion
 	for isDigit(l.currentChar) {
 		l.readChar()
+	}
+	return l.input[position:l.currentPostion]
+}
+
+func (l *Lexer) readString() string {
+	position := l.currentPostion + 1
+	for {
+		l.readChar()
+		// TODO: check next token is valid (\t, \n, ...)
+		if l.currentChar == '\\' {
+			l.readChar()
+			continue
+		}
+
+		if l.currentChar == '"' || l.currentChar == 0 {
+			break
+		}
 	}
 	return l.input[position:l.currentPostion]
 }

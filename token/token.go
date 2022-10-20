@@ -10,7 +10,8 @@ const (
 	IDENT = "IDENT"
 
 	// Literals
-	INT = "INT"
+	INT    = "INT"
+	STRING = "STRING"
 
 	// Operators
 	ASSIGN   = "="

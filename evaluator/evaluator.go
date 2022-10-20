@@ -21,6 +21,8 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 		return Eval(node.Expression, env)
 	case *ast.IntegerLiteral:
 		return &value.Integer{Value: node.Value}
+	case *ast.StringLiteral:
+		return &value.String{Value: node.Value}
 	case *ast.Boolean:
 		return booleanValue(node.Value)
 	case *ast.PrefixExpression:
@@ -125,19 +127,20 @@ func evalPrefixExpression(operator string, right value.Value) value.Value {
 }
 
 func evalInfixExpression(op string, left value.Value, right value.Value) value.Value {
+	// Do not support expressions between different value types
 	if left.Type() != right.Type() {
 		return newError("type mismatch: %s %s %s", left.Type(), op, right.Type())
 	}
 
-	if left.Type() == value.INTEGER_VALUE && right.Type() == value.INTEGER_VALUE {
-		return evalIntegerInfixExpression(op, left, right)
-	}
-
 	// Use pointer comparison for boolean values
-	switch op {
-	case "==":
+	switch {
+	case left.Type() == value.INTEGER_VALUE:
+		return evalIntegerInfixExpression(op, left, right)
+	case left.Type() == value.STRING_VALUE:
+		return evalStringInfixExpression(op, left, right)
+	case op == "==":
 		return booleanValue(left == right)
-	case "!=":
+	case op == "!=":
 		return booleanValue(left != right)
 	default:
 		return newError("unknown operator: %s %s %s", left.Type(), op, right.Type())
@@ -229,6 +232,16 @@ func evalExpressions(exps []ast.Expression, env *value.Environment) []value.Valu
 	}
 
 	return ret
+}
+
+func evalStringInfixExpression(op string, left, right value.Value) value.Value {
+	if op != "+" {
+		return newError("unknown operator: %s %s %s", left.Type(), op, right.Type())
+	}
+
+	leftVal := left.(*value.String).Value
+	rightVal := right.(*value.String).Value
+	return &value.String{Value: leftVal + rightVal}
 }
 
 func applyFunction(fnValue value.Value, args []value.Value) value.Value {

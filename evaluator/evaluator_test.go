@@ -238,7 +238,12 @@ func TestErrorHandling(t *testing.T) {
 			"foo;",
 			"identifier not found: foo",
 		},
+		{
+			`"simia" - "sim"`,
+			"unknown operator: STRING - STRING",
+		},
 	}
+
 	for _, tt := range tests {
 		evaluated := testEval(tt.input)
 		err, ok := evaluated.(*value.Error)
@@ -317,4 +322,30 @@ func TestClosures(t *testing.T) {
   addTwo(2);
   `
 	testIntegerValue(t, testEval(input), 4)
+}
+
+func TestStringLiteral(t *testing.T) {
+	input := `"test dev"`
+	evaluated := testEval(input)
+	str, ok := evaluated.(*value.String)
+	if !ok {
+		t.Fatalf("value is not String. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if str.Value != "test dev" {
+		t.Errorf("String has wrong value. got=%q", str.Value)
+	}
+}
+
+func TestStringConcatenation(t *testing.T) {
+	input := `"simia" + " " + "lang"`
+	evaluated := testEval(input)
+	str, ok := evaluated.(*value.String)
+	if !ok {
+		t.Fatalf("value is not String. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if str.Value != "simia lang" {
+		t.Errorf("String has wrong value. got=%q", str.Value)
+	}
 }
