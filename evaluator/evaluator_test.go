@@ -378,3 +378,67 @@ func TestBuiltinFunctions(t *testing.T) {
 		}
 	}
 }
+
+func TestArrayLiteral(t *testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+
+	evaluated := testEval(input)
+	result, ok := evaluated.(*value.Array)
+	if !ok {
+		t.Fatalf("value is not Array. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if len(result.Elements) != 3 {
+		t.Fatalf("array has wrong number of elements. got=%d", len(result.Elements))
+	}
+
+	testIntegerValue(t, result.Elements[0], 1)
+	testIntegerValue(t, result.Elements[1], 4)
+	testIntegerValue(t, result.Elements[2], 6)
+}
+
+func TestArrayIndexExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected any
+	}{
+		{
+			"[1, 2, 3][0]",
+			1,
+		},
+		{
+			"let i = 0; [1][i];",
+			1,
+		},
+		{
+			"[1, 2][3 - 2];",
+			2,
+		},
+		{
+			"let arr = [1, 2, 3]; arr[2]",
+			3,
+		},
+		{
+			"let arr = [1, 2, 3]; arr[0] + arr[1];",
+			3,
+		},
+		{
+			"let arr = [1, 2, 3]; let i = arr[0]; arr[i];",
+			2,
+		},
+		{
+			"[1, 2][3];",
+			nil,
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		integer, ok := tt.expected.(int)
+		if ok {
+			testIntegerValue(t, evaluated, int64(integer))
+		} else {
+			testNilValue(t, evaluated)
+		}
+	}
+}

@@ -18,6 +18,7 @@ const (
 	ERROR_VALUE              = "ERROR"
 	FUNCTION_VALUE           = "FN"
 	BUILTIN_VALUE            = "BUILTIN"
+	ARRAY_VALUE              = "ARRAY"
 )
 
 type Value interface {
@@ -133,4 +134,27 @@ func (b *Builtin) Type() ValueType {
 
 func (b *Builtin) Inspect() string {
 	return "builtin function"
+}
+
+type Array struct {
+	Elements []Value
+}
+
+func (a *Array) Type() ValueType {
+	return ARRAY_VALUE
+}
+
+func (a *Array) Inspect() string {
+	var out strings.Builder
+
+	elements := make([]string, len(a.Elements))
+	for i, e := range a.Elements {
+		elements[i] = e.Inspect()
+	}
+
+	out.WriteString("[")
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString("]")
+
+	return out.String()
 }

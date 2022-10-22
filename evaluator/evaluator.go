@@ -74,6 +74,25 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 			return args[0]
 		}
 		return applyFunction(fn, args)
+	case *ast.ArrayLiteral:
+		elements := evalExpressions(node.Elements, env)
+		if len(elements) == 1 && isError(elements[0]) {
+			return elements[0]
+		}
+
+		return &value.Array{Elements: elements}
+	case *ast.IndexExpression:
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+
+		index := Eval(node.Index, env)
+		if isError(index) {
+			return index
+		}
+
+		return evalIndexExpression(left, index)
 	}
 
 	return nil
@@ -259,6 +278,27 @@ func applyFunction(fnValue value.Value, args []value.Value) value.Value {
 	default:
 		return newError("not a function: %s", fnValue.Type())
 	}
+}
+
+func evalIndexExpression(left, index value.Value) value.Value {
+	switch {
+	case left.Type() == value.ARRAY_VALUE && index.Type() == value.INTEGER_VALUE:
+		return evalArrayIndexExpression(left, index)
+	default:
+		return newError("index operator not supported: %s", left.Type())
+	}
+}
+
+func evalArrayIndexExpression(arrayVal, index value.Value) value.Value {
+	array := arrayVal.(*value.Array)
+	idx := index.(*value.Integer).Value
+	max := int64(len(array.Elements) - 1)
+	if idx < 0 || idx > max {
+		// TODO: return error
+		return NIL
+	}
+
+	return array.Elements[idx]
 }
 
 func extendFunctionEnv(fn *value.Function, args []value.Value) *value.Environment {
