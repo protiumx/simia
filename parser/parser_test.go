@@ -342,6 +342,14 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"add(a + b + c * d / f + g)",
 			"add((((a + b) + ((c * d) / f)) + g))",
 		},
+		{
+			"a * [1, 2, 3][b * c] * d",
+			"((a * ([1, 2, 3][(b * c)])) * d)",
+		},
+		{
+			"add(a * b[2], b[1], 2 * [1, 2][1])",
+			"add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
+		},
 	}
 
 	for _, tt := range tests {
@@ -696,8 +704,8 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 	return true
 }
 
-func testInfixExpression(t *testing.T, exp ast.Expression, left interface{},
-	operator string, right interface{},
+func testInfixExpression(t *testing.T, exp ast.Expression, left any,
+	operator string, right any,
 ) bool {
 	opExp, ok := exp.(*ast.InfixExpression)
 	if !ok {
@@ -832,5 +840,52 @@ func TestStringLiteralExpression(t *testing.T) {
 
 	if literal.Value != "test dev" {
 		t.Errorf("literal.Value not %q. got=%q", "test dev", literal.Value)
+	}
+}
+
+func TestArrayLiteral(t *testing.T) {
+	input := "[1, 2 * 2, 3 + 3, false]"
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	array, ok := stmt.Expression.(*ast.ArrayLiteral)
+	if !ok {
+		t.Fatalf("exp is no ast.ArrayLiteral. got=%T", stmt.Expression)
+	}
+
+	if len(array.Elements) != 4 {
+		t.Fatalf("len no 3. got=%d", len(array.Elements))
+	}
+
+	testIntegerLiteral(t, array.Elements[0], 1)
+	testInfixExpression(t, array.Elements[1], 2, "*", 2)
+	testInfixExpression(t, array.Elements[2], 3, "+", 3)
+	testBooleanLiteral(t, array.Elements[3], false)
+}
+
+func TestParsingIndexExpression(t *testing.T) {
+	input := "arr[1 + 2]"
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	indexExp, ok := stmt.Expression.(*ast.IndexExpression)
+	if !ok {
+		t.Fatalf("exp not *ast.IndexExpression. got=%T", stmt.Expression)
+	}
+
+	if !testIdentifier(t, indexExp.Left, "arr") {
+		return
+	}
+
+	if !testInfixExpression(t, indexExp.Index, 1, "+", 2) {
+		return
 	}
 }

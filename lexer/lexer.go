@@ -9,8 +9,8 @@ import (
 type Lexer struct {
 	input          string
 	currentPostion int
-	// Value of 0 represents the NUL
 	// TODO: support Unicode with `rune`
+	// Value of 0 represents the NULL char
 	currentChar  byte
 	readPotition int
 }
