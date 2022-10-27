@@ -50,8 +50,8 @@ func checkArgsNumber(n int, args []value.Value) *value.Error {
 }
 
 func checkArgType(argType value.ValueType, expectedType value.ValueType, fnName string) *value.Error {
-	if argType.Type() != expectedType {
-		return newError("argument to `%s` must be %s, got %s", fnName, argType.Type(), expectedType)
+	if argType != expectedType {
+		return newError("argument to `%s` must be %s, got %s", fnName, argType, expectedType)
 	}
 
 	return nil

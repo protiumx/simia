@@ -242,6 +242,10 @@ func TestErrorHandling(t *testing.T) {
 			`"simia" - "sim"`,
 			"unknown operator: STRING - STRING",
 		},
+		{
+			`{"name": "test"}[fn() {}];`,
+			"key is not string: FN",
+		},
 	}
 
 	for _, tt := range tests {
@@ -441,6 +445,70 @@ func TestArrayIndexExpression(t *testing.T) {
 			testIntegerValue(t, evaluated, int64(integer))
 		} else {
 			testNilValue(t, evaluated)
+		}
+	}
+}
+
+func TestHashLiteral(t *testing.T) {
+	input := `
+  let a = "a";
+  {
+    "b": 10 - 1,
+    "c" + "d": 6,
+    a: 1
+  }
+  `
+	evaluated := testEval(input)
+	resutl, ok := evaluated.(*value.Hash)
+	if !ok {
+		t.Fatalf("Eval result is not a Hash. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	expected := map[string]int64{
+		"b":  9,
+		"cd": 6,
+		"a":  1,
+	}
+	if len(resutl.Pairs) != len(expected) {
+		t.Fatalf("Hash has wrong num of pairs. got=%d", len(resutl.Pairs))
+	}
+
+	for k, v := range expected {
+		val, ok := resutl.Pairs[k]
+		if !ok {
+			t.Errorf("no pair for key %s", k)
+		}
+
+		testIntegerValue(t, val, v)
+	}
+}
+
+func TestHasIndexExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected any
+	}{
+		{
+			`{"foo": 5}["foo"]`,
+			5,
+		},
+		{
+			`{"foo": 5}["test"]`,
+			nil,
+		},
+		{
+			`let foo = "foo"; {"foo": 5}[foo]`,
+			5,
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		val, ok := tt.expected.(int)
+		if !ok {
+			testNilValue(t, evaluated)
+		} else {
+			testIntegerValue(t, evaluated, int64(val))
 		}
 	}
 }

@@ -19,6 +19,7 @@ const (
 	FUNCTION_VALUE           = "FN"
 	BUILTIN_VALUE            = "BUILTIN"
 	ARRAY_VALUE              = "ARRAY"
+	HASH_VALUE               = "HASH"
 )
 
 type Value interface {
@@ -156,5 +157,29 @@ func (a *Array) Inspect() string {
 	out.WriteString(strings.Join(elements, ", "))
 	out.WriteString("]")
 
+	return out.String()
+}
+
+type Hash struct {
+	Pairs map[string]Value
+}
+
+func (h *Hash) Type() ValueType {
+	return HASH_VALUE
+}
+
+func (h *Hash) Inspect() string {
+	var out strings.Builder
+
+	pairs := make([]string, len(h.Pairs), len(h.Pairs))
+	i := 0
+	for k, v := range h.Pairs {
+		pairs[i] = fmt.Sprintf("%s: %s", k, v.Inspect())
+		i++
+	}
+
+	out.WriteString("{")
+	out.WriteString(strings.Join(pairs, ", "))
+	out.WriteString("}")
 	return out.String()
 }

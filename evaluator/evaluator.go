@@ -93,6 +93,8 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 		}
 
 		return evalIndexExpression(left, index)
+	case *ast.HashLiteral:
+		return evalHashLiteral(node, env)
 	}
 
 	return nil
@@ -284,6 +286,8 @@ func evalIndexExpression(left, index value.Value) value.Value {
 	switch {
 	case left.Type() == value.ARRAY_VALUE && index.Type() == value.INTEGER_VALUE:
 		return evalArrayIndexExpression(left, index)
+	case left.Type() == value.HASH_VALUE:
+		return evalHashIndexExpression(left, index)
 	default:
 		return newError("index operator not supported: %s", left.Type())
 	}
@@ -299,6 +303,50 @@ func evalArrayIndexExpression(arrayVal, index value.Value) value.Value {
 	}
 
 	return array.Elements[idx]
+}
+
+func evalHashLiteral(node *ast.HashLiteral, env *value.Environment) value.Value {
+	pairs := make(map[string]value.Value)
+
+	for k, v := range node.Pairs {
+		key := Eval(k, env)
+		if isError(key) {
+			return key
+		}
+
+		var keyVal string
+		switch keyType := key.(type) {
+		case *value.String:
+			keyVal = keyType.Value
+		default:
+			return newError("key is not string: %s", key.Type())
+		}
+
+		value := Eval(v, env)
+		if isError(value) {
+			return value
+		}
+
+		pairs[keyVal] = value
+	}
+
+	return &value.Hash{Pairs: pairs}
+}
+
+func evalHashIndexExpression(hash, index value.Value) value.Value {
+	hashVal := hash.(*value.Hash)
+
+	key, ok := index.(*value.String)
+	if !ok {
+		return newError("key is not string: %s", index.Type())
+	}
+
+	val, ok := hashVal.Pairs[key.Value]
+	if !ok {
+		return NIL
+	}
+
+	return val
 }
 
 func extendFunctionEnv(fn *value.Function, args []value.Value) *value.Environment {
