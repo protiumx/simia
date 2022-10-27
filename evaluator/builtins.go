@@ -1,6 +1,10 @@
 package evaluator
 
-import "protiumx.dev/simia/value"
+import (
+	"fmt"
+
+	"protiumx.dev/simia/value"
+)
 
 var builtins = map[string]*value.Builtin{
 	"len": {
@@ -37,6 +41,14 @@ var builtins = map[string]*value.Builtin{
 			newElements[length] = args[1]
 
 			return &value.Array{Elements: newElements}
+		},
+	},
+	"log": {
+		Fn: func(args ...value.Value) value.Value {
+			for _, arg := range args {
+				fmt.Println(arg.Inspect())
+			}
+			return NIL
 		},
 	},
 }
