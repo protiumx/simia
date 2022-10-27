@@ -32,6 +32,9 @@ const (
 	RPAREN    = ")"
 	LBRACE    = "{"
 	RBRACE    = "}"
+	LBRACKET  = "["
+	RBRACKET  = "]"
+	COLON     = ":"
 
 	// Keywords
 	FUNCTION = "FUNCTION"

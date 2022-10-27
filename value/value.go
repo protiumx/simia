@@ -17,6 +17,9 @@ const (
 	RETURN_VALUE             = "RETURN"
 	ERROR_VALUE              = "ERROR"
 	FUNCTION_VALUE           = "FN"
+	BUILTIN_VALUE            = "BUILTIN"
+	ARRAY_VALUE              = "ARRAY"
+	HASH_VALUE               = "HASH"
 )
 
 type Value interface {
@@ -117,5 +120,66 @@ func (fn *Function) Inspect() string {
 	out.WriteString(fn.Body.String())
 	out.WriteString("\n}")
 
+	return out.String()
+}
+
+type BuiltinFunction func(args ...Value) Value
+
+type Builtin struct {
+	Fn BuiltinFunction
+}
+
+func (b *Builtin) Type() ValueType {
+	return BUILTIN_VALUE
+}
+
+func (b *Builtin) Inspect() string {
+	return "builtin function"
+}
+
+type Array struct {
+	Elements []Value
+}
+
+func (a *Array) Type() ValueType {
+	return ARRAY_VALUE
+}
+
+func (a *Array) Inspect() string {
+	var out strings.Builder
+
+	elements := make([]string, len(a.Elements))
+	for i, e := range a.Elements {
+		elements[i] = e.Inspect()
+	}
+
+	out.WriteString("[")
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString("]")
+
+	return out.String()
+}
+
+type Hash struct {
+	Pairs map[string]Value
+}
+
+func (h *Hash) Type() ValueType {
+	return HASH_VALUE
+}
+
+func (h *Hash) Inspect() string {
+	var out strings.Builder
+
+	pairs := make([]string, len(h.Pairs), len(h.Pairs))
+	i := 0
+	for k, v := range h.Pairs {
+		pairs[i] = fmt.Sprintf("%s: %s", k, v.Inspect())
+		i++
+	}
+
+	out.WriteString("{")
+	out.WriteString(strings.Join(pairs, ", "))
+	out.WriteString("}")
 	return out.String()
 }

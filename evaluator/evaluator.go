@@ -74,6 +74,27 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 			return args[0]
 		}
 		return applyFunction(fn, args)
+	case *ast.ArrayLiteral:
+		elements := evalExpressions(node.Elements, env)
+		if len(elements) == 1 && isError(elements[0]) {
+			return elements[0]
+		}
+
+		return &value.Array{Elements: elements}
+	case *ast.IndexExpression:
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+
+		index := Eval(node.Index, env)
+		if isError(index) {
+			return index
+		}
+
+		return evalIndexExpression(left, index)
+	case *ast.HashLiteral:
+		return evalHashLiteral(node, env)
 	}
 
 	return nil
@@ -212,11 +233,15 @@ func evalIfExpression(ie *ast.IfExpression, env *value.Environment) value.Value 
 }
 
 func evalIdentifier(node *ast.Identifier, env *value.Environment) value.Value {
-	val, ok := env.Get(node.Value)
-	if !ok {
-		return newError("identifier not found: " + node.Value)
+	if val, ok := env.Get(node.Value); ok {
+		return val
 	}
-	return val
+
+	if builtin, ok := builtins[node.Value]; ok {
+		return builtin
+	}
+
+	return newError("identifier not found: " + node.Value)
 }
 
 func evalExpressions(exps []ast.Expression, env *value.Environment) []value.Value {
@@ -245,14 +270,83 @@ func evalStringInfixExpression(op string, left, right value.Value) value.Value {
 }
 
 func applyFunction(fnValue value.Value, args []value.Value) value.Value {
-	fn, ok := fnValue.(*value.Function)
-	if !ok {
+	switch fn := fnValue.(type) {
+	case *value.Function:
+		fnEnv := extendFunctionEnv(fn, args)
+		evaluated := Eval(fn.Body, fnEnv)
+		return unwrapReturnValue(evaluated)
+	case *value.Builtin:
+		return fn.Fn(args...)
+	default:
 		return newError("not a function: %s", fnValue.Type())
 	}
+}
 
-	fnEnv := extendFunctionEnv(fn, args)
-	evaluated := Eval(fn.Body, fnEnv)
-	return unwrapReturnValue(evaluated)
+func evalIndexExpression(left, index value.Value) value.Value {
+	switch {
+	case left.Type() == value.ARRAY_VALUE && index.Type() == value.INTEGER_VALUE:
+		return evalArrayIndexExpression(left, index)
+	case left.Type() == value.HASH_VALUE:
+		return evalHashIndexExpression(left, index)
+	default:
+		return newError("index operator not supported: %s", left.Type())
+	}
+}
+
+func evalArrayIndexExpression(arrayVal, index value.Value) value.Value {
+	array := arrayVal.(*value.Array)
+	idx := index.(*value.Integer).Value
+	max := int64(len(array.Elements) - 1)
+	if idx < 0 || idx > max {
+		// TODO: return error
+		return NIL
+	}
+
+	return array.Elements[idx]
+}
+
+func evalHashLiteral(node *ast.HashLiteral, env *value.Environment) value.Value {
+	pairs := make(map[string]value.Value)
+
+	for k, v := range node.Pairs {
+		key := Eval(k, env)
+		if isError(key) {
+			return key
+		}
+
+		var keyVal string
+		switch keyType := key.(type) {
+		case *value.String:
+			keyVal = keyType.Value
+		default:
+			return newError("key is not string: %s", key.Type())
+		}
+
+		value := Eval(v, env)
+		if isError(value) {
+			return value
+		}
+
+		pairs[keyVal] = value
+	}
+
+	return &value.Hash{Pairs: pairs}
+}
+
+func evalHashIndexExpression(hash, index value.Value) value.Value {
+	hashVal := hash.(*value.Hash)
+
+	key, ok := index.(*value.String)
+	if !ok {
+		return newError("key is not string: %s", index.Type())
+	}
+
+	val, ok := hashVal.Pairs[key.Value]
+	if !ok {
+		return NIL
+	}
+
+	return val
 }
 
 func extendFunctionEnv(fn *value.Function, args []value.Value) *value.Environment {

@@ -9,8 +9,8 @@ import (
 type Lexer struct {
 	input          string
 	currentPostion int
-	// Value of 0 represents the NUL
 	// TODO: support Unicode with `rune`
+	// Value of 0 represents the NULL char
 	currentChar  byte
 	readPotition int
 }
@@ -53,6 +53,12 @@ func (l *Lexer) NextToken() token.Token {
 		ret = newToken(token.LBRACE, l.currentChar)
 	case '}':
 		ret = newToken(token.RBRACE, l.currentChar)
+	case '[':
+		ret = newToken(token.LBRACKET, l.currentChar)
+	case ']':
+		ret = newToken(token.RBRACKET, l.currentChar)
+	case ':':
+		ret = newToken(token.COLON, l.currentChar)
 	case '"':
 		ret.Type = token.STRING
 		ret.Literal = l.readString()

@@ -242,6 +242,10 @@ func TestErrorHandling(t *testing.T) {
 			`"simia" - "sim"`,
 			"unknown operator: STRING - STRING",
 		},
+		{
+			`{"name": "test"}[fn() {}];`,
+			"key is not string: FN",
+		},
 	}
 
 	for _, tt := range tests {
@@ -347,5 +351,164 @@ func TestStringConcatenation(t *testing.T) {
 
 	if str.Value != "simia lang" {
 		t.Errorf("String has wrong value. got=%q", str.Value)
+	}
+}
+
+func TestBuiltinFunctions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected any
+	}{
+		{`len("")`, 0},
+		{`len("four")`, 4},
+		{`len("hello world")`, 11},
+		{`len(1)`, "argument to `len` not supported, got INTEGER"},
+		{`len("one", "two")`, "wrong number of arguments. got=2, want=1"},
+		{`len([1, 2, 3])`, 3},
+		{`len([])`, 0},
+	}
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		switch expected := tt.expected.(type) {
+		case int:
+			testIntegerValue(t, evaluated, int64(expected))
+		case string:
+			err, ok := evaluated.(*value.Error)
+			if !ok {
+				t.Errorf("value is not Error. got=%T (%+v)", evaluated, evaluated)
+			}
+
+			if err.Message != expected {
+				t.Errorf("wrong error message. expected=%q, got=%q", expected, err.Message)
+			}
+		}
+	}
+}
+
+func TestArrayLiteral(t *testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+
+	evaluated := testEval(input)
+	result, ok := evaluated.(*value.Array)
+	if !ok {
+		t.Fatalf("value is not Array. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if len(result.Elements) != 3 {
+		t.Fatalf("array has wrong number of elements. got=%d", len(result.Elements))
+	}
+
+	testIntegerValue(t, result.Elements[0], 1)
+	testIntegerValue(t, result.Elements[1], 4)
+	testIntegerValue(t, result.Elements[2], 6)
+}
+
+func TestArrayIndexExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected any
+	}{
+		{
+			"[1, 2, 3][0]",
+			1,
+		},
+		{
+			"let i = 0; [1][i];",
+			1,
+		},
+		{
+			"[1, 2][3 - 2];",
+			2,
+		},
+		{
+			"let arr = [1, 2, 3]; arr[2]",
+			3,
+		},
+		{
+			"let arr = [1, 2, 3]; arr[0] + arr[1];",
+			3,
+		},
+		{
+			"let arr = [1, 2, 3]; let i = arr[0]; arr[i];",
+			2,
+		},
+		{
+			"[1, 2][3];",
+			nil,
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		integer, ok := tt.expected.(int)
+		if ok {
+			testIntegerValue(t, evaluated, int64(integer))
+		} else {
+			testNilValue(t, evaluated)
+		}
+	}
+}
+
+func TestHashLiteral(t *testing.T) {
+	input := `
+  let a = "a";
+  {
+    "b": 10 - 1,
+    "c" + "d": 6,
+    a: 1
+  }
+  `
+	evaluated := testEval(input)
+	resutl, ok := evaluated.(*value.Hash)
+	if !ok {
+		t.Fatalf("Eval result is not a Hash. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	expected := map[string]int64{
+		"b":  9,
+		"cd": 6,
+		"a":  1,
+	}
+	if len(resutl.Pairs) != len(expected) {
+		t.Fatalf("Hash has wrong num of pairs. got=%d", len(resutl.Pairs))
+	}
+
+	for k, v := range expected {
+		val, ok := resutl.Pairs[k]
+		if !ok {
+			t.Errorf("no pair for key %s", k)
+		}
+
+		testIntegerValue(t, val, v)
+	}
+}
+
+func TestHasIndexExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected any
+	}{
+		{
+			`{"foo": 5}["foo"]`,
+			5,
+		},
+		{
+			`{"foo": 5}["test"]`,
+			nil,
+		},
+		{
+			`let foo = "foo"; {"foo": 5}[foo]`,
+			5,
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		val, ok := tt.expected.(int)
+		if !ok {
+			testNilValue(t, evaluated)
+		} else {
+			testIntegerValue(t, evaluated, int64(val))
+		}
 	}
 }
