@@ -24,6 +24,7 @@ const (
 	GT       = ">"
 	EQ       = "=="
 	NOT_EQ   = "!="
+	PIPELINE = "|>"
 
 	// Delimiters
 	COMMA     = ","
@@ -35,6 +36,7 @@ const (
 	LBRACKET  = "["
 	RBRACKET  = "]"
 	COLON     = ":"
+	PIPE      = "|"
 
 	// Keywords
 	FUNCTION = "FUNCTION"
