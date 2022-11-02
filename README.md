@@ -7,11 +7,11 @@ Go implementation of the Monkey language interpreter from the book [Writing an i
 *NOTE*: this repo is work in progress
 
 ## TODO
-- [  ] Add `collumn` and `line` numbers
-- [  ] Implement `array` with spread `...` operator
-- [  ] Support piping like in Elixir (|>)
-- [  ] Produce bytecode and implement VM
-- [  ] Implement `Option` as in `rust` and remove `None`
+- [ ] Add `collumn` and `line` numbers
+- [ ] Implement `array` with spread `...` operator
+- [x] Support piping like in Elixir (`|>`)
+- [ ] Produce bytecode and implement VM
+- [ ] Implement `Option` as in `rust` and remove `None`
 
 ## License
 
