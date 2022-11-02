@@ -12,6 +12,7 @@ import (
 // Precedences
 const (
 	LOWEST = iota + 1
+	PIPELINE
 	EQUALS
 	LESS_GREATER
 	SUM
@@ -32,6 +33,7 @@ var precedences = map[token.TokenType]int{
 	token.ASTERISK: PRODUCT,
 	token.LPAREN:   CALL,
 	token.LBRACKET: INDEX,
+	token.PIPELINE: PIPELINE,
 }
 
 type Parser struct {
@@ -74,6 +76,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
 	p.registerInfix(token.LT, p.parseInfixExpression)
 	p.registerInfix(token.GT, p.parseInfixExpression)
+	p.registerInfix(token.PIPELINE, p.parseInfixExpression)
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
 	p.registerInfix(token.LBRACKET, p.parseIndexExpression)
 

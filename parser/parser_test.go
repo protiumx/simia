@@ -188,9 +188,9 @@ func TestParsingPrefixExpressions(t *testing.T) {
 func TestParsingInfixExpressions(t *testing.T) {
 	infixTests := []struct {
 		input      string
-		leftValue  interface{}
+		leftValue  any
 		operator   string
-		rightValue interface{}
+		rightValue any
 	}{
 		{"5 + 5;", 5, "+", 5},
 		{"5 - 5;", 5, "-", 5},
@@ -211,6 +211,7 @@ func TestParsingInfixExpressions(t *testing.T) {
 		{"true == true", true, "==", true},
 		{"true != false", true, "!=", false},
 		{"false == false", false, "==", false},
+		{" 7 |> double()", 7, "|>", "double"},
 	}
 
 	for _, tt := range infixTests {
@@ -349,6 +350,14 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 		{
 			"add(a * b[2], b[1], 2 * [1, 2][1])",
 			"add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
+		},
+		{
+			"7 * 7 |> double()",
+			"((7 * 7) |> double())",
+		},
+		{
+			"7 |> add(8 * 8)",
+			"(7 |> add((8 * 8)))",
 		},
 	}
 
@@ -732,7 +741,7 @@ func testInfixExpression(t *testing.T, exp ast.Expression, left any,
 func testLiteralExpression(
 	t *testing.T,
 	exp ast.Expression,
-	expected interface{},
+	expected any,
 ) bool {
 	switch v := expected.(type) {
 	case int:
@@ -770,8 +779,14 @@ func testIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
 }
 
 func testIdentifier(t *testing.T, exp ast.Expression, value string) bool {
-	ident, ok := exp.(*ast.Identifier)
-	if !ok {
+	var ident *ast.Identifier
+	if fnCall, ok := exp.(*ast.CallExpression); ok {
+		ident = fnCall.Function.(*ast.Identifier)
+	} else {
+		ident, _ = exp.(*ast.Identifier)
+	}
+
+	if ident == nil {
 		t.Errorf("exp not *ast.Identifier. got=%T", exp)
 		return false
 	}
