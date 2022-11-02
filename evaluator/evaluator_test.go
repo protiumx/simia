@@ -321,7 +321,7 @@ func TestFunctionApplication(t *testing.T) {
 	}
 }
 
-func TestFunctionPipeLine(t *testing.T) {
+func TestFunctionPipeline(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected int64
