@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"protiumx.dev/simia/ast"
+	"protiumx.dev/simia/token"
 	"protiumx.dev/simia/value"
 )
 
@@ -32,6 +33,14 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 		}
 		return evalPrefixExpression(node.Operator, right)
 	case *ast.InfixExpression:
+		// Eval pipiline expression
+		fnCall, ok := node.Right.(*ast.CallExpression)
+		if node.Operator == token.PIPELINE && ok {
+			// prepend the left node to the fn arguments
+			fnCall.Arguments = append([]ast.Expression{node.Left}, fnCall.Arguments...)
+			return Eval(node.Right, env)
+		}
+
 		left := Eval(node.Left, env)
 		if isError(left) {
 			return left

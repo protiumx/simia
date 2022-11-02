@@ -299,7 +299,7 @@ func TestFunctionValue(t *testing.T) {
 	}
 }
 
-func TestFunctgionApplication(t *testing.T) {
+func TestFunctionApplication(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected int64
@@ -310,6 +310,22 @@ func TestFunctgionApplication(t *testing.T) {
 		{"let add = fn(x, y) { x + y; }; add(5, 5);", 10},
 		{"let add = fn(x, y) { x + y; }; add(5, add(5, 5));", 15},
 		{"fn(x) { x; }(5);", 5},
+	}
+
+	for _, tt := range tests {
+		testIntegerValue(t, testEval(tt.input), tt.expected)
+	}
+}
+
+func TestFunctionPipeLine(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"let double = fn(x) { x * 2 }; 3 |> double();", 6},
+		{"let add = fn(x, y) { x + y }; 3 |> add(7);", 10},
+		{"let double = fn(x) { x * 2 }; let add = fn(x, y) { x + y }; 3 |> add(7) |> double();", 20},
+		{"let add = fn(x, y) { x + y }; 3 |> add(add(1, 1));", 5},
 	}
 
 	for _, tt := range tests {
