@@ -61,6 +61,9 @@ func (l *Lexer) NextToken() token.Token {
 		ret = newToken(token.COLON, l.currentChar)
 	case '|':
 		ret = l.getOneOrTwoCharToken('>', token.PIPE, token.PIPELINE)
+		if ret.Literal == token.PIPE {
+			ret = newToken(token.ILLEGAL, l.currentChar)
+		}
 	case '"':
 		ret.Type = token.STRING
 		ret.Literal = l.readString()

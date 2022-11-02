@@ -34,8 +34,11 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 		return evalPrefixExpression(node.Operator, right)
 	case *ast.InfixExpression:
 		// Eval pipiline expression
-		fnCall, ok := node.Right.(*ast.CallExpression)
-		if node.Operator == token.PIPELINE && ok {
+		if node.Operator == token.PIPELINE {
+			fnCall, ok := node.Right.(*ast.CallExpression)
+			if !ok {
+				return newError("expected %s in pipiline expression. got=%T", token.FUNCTION, node.Right)
+			}
 			// prepend the left node to the fn arguments
 			fnCall.Arguments = append([]ast.Expression{node.Left}, fnCall.Arguments...)
 			return Eval(node.Right, env)

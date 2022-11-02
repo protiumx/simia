@@ -246,6 +246,10 @@ func TestErrorHandling(t *testing.T) {
 			`{"name": "test"}[fn() {}];`,
 			"key is not string: FN",
 		},
+		{
+			`7 |> 0;`,
+			"expected FUNCTION in pipiline expression. got=*ast.IntegerLiteral",
+		},
 	}
 
 	for _, tt := range tests {
