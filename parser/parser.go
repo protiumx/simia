@@ -88,6 +88,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
 	p.registerInfix(token.LBRACKET, p.parseIndexExpression)
 	p.registerInfix(token.IN, p.parseInExpression)
+	p.registerInfix(token.ASSIGN, p.parseAssignExpression)
 
 	// Set values for current and peak
 	p.nextToken()
@@ -444,6 +445,23 @@ func (p *Parser) parseInExpression(element ast.Expression) ast.Expression {
 	exp := &ast.InExpression{Token: p.currentToken, Element: element}
 	p.nextToken()
 	exp.Iterable = p.parseExpression(LOWEST)
+	return exp
+}
+
+func (p *Parser) parseAssignExpression(left ast.Expression) ast.Expression {
+	identifier, ok := left.(*ast.Identifier)
+	if !ok {
+		p.errors = append(p.errors, fmt.Sprintf("expected identifier, got=%T %+v", left, left))
+		return nil
+	}
+
+	exp := &ast.AssignExpression{Token: p.currentToken, Identifier: identifier}
+	p.nextToken()
+	exp.Value = p.parseExpression(LOWEST)
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+
 	return exp
 }
 

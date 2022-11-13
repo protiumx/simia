@@ -1030,3 +1030,38 @@ func TestHashLiterals(t *testing.T) {
 		}
 	}
 }
+
+func TestParseAssignExpression(t *testing.T) {
+	tests := []struct {
+		input              string
+		expectedIdentifier string
+		expectedValue      any
+	}{
+		{"foo = 1;", "foo", 1},
+		{"foo = bar;", "foo", "bar"},
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
+		assignExp, ok := stmt.Expression.(*ast.AssignExpression)
+		if !ok {
+			t.Fatalf("expression is not ast.AssignExpression. got=%T", stmt.Expression)
+		}
+
+		if assignExp.Identifier.Value != tt.expectedIdentifier {
+			t.Errorf("wrong identifier. expected=%s, got:%s", tt.expectedIdentifier, assignExp.Identifier.Value)
+		}
+
+		switch value := assignExp.Value.(type) {
+		case *ast.IntegerLiteral:
+			testIntegerLiteral(t, value, 1)
+		case *ast.Identifier:
+			testIdentifier(t, value, "bar")
+		}
+	}
+}

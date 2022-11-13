@@ -254,6 +254,10 @@ func TestErrorHandling(t *testing.T) {
 			"1..1",
 			"range start and end must be different: 1..1",
 		},
+		{
+			"a = 11;",
+			"error assigning undeclared variable \"a\"",
+		},
 	}
 
 	for _, tt := range tests {
@@ -563,7 +567,13 @@ func TestHasIndexExpression(t *testing.T) {
 }
 
 func TestForLoop(t *testing.T) {
-	input := "let a = 0; for (i in 1..11) { let a = a + i; }; a;"
+	input := "let a = 0; for (i in 1..11) { a = a + i; } a;"
 	evaluated := testEval(input)
 	testIntegerValue(t, evaluated, 55)
+}
+
+func TestAssign(t *testing.T) {
+	input := "let foo = 10; foo = foo + 1; foo;"
+	evaluated := testEval(input)
+	testIntegerValue(t, evaluated, 11)
 }

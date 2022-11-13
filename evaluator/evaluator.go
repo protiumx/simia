@@ -109,6 +109,18 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 		return evalIndexExpression(left, index)
 	case *ast.HashLiteral:
 		return evalHashLiteral(node, env)
+	case *ast.AssignExpression:
+		val := Eval(node.Value, env)
+		if isError(val) {
+			return val
+		}
+
+		_, ok := env.Get(node.Identifier.Value)
+		if !ok {
+			return newError("error assigning undeclared variable \"%s\"", node.Identifier.Value)
+		}
+		env.Set(node.Identifier.Value, val)
+		return NIL
 	}
 
 	return nil
@@ -325,6 +337,7 @@ func evalForLoopRange(
 		if isError(e) {
 			return e
 		}
+
 		if ascDirection {
 			currentValue.Value++
 		} else {

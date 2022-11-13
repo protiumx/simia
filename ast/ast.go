@@ -431,3 +431,24 @@ func (ie *InExpression) String() string {
 	out.WriteString(")")
 	return out.String()
 }
+
+type AssignExpression struct {
+	Token      token.Token
+	Identifier *Identifier
+	Value      Expression
+}
+
+func (ae *AssignExpression) expressionNode() {}
+
+func (ae *AssignExpression) TokenLiteral() string {
+	return ae.Token.Literal
+}
+
+func (ae *AssignExpression) String() string {
+	var out strings.Builder
+	out.WriteString(ae.Identifier.String())
+	out.WriteString(" = ")
+	out.WriteString(ae.Value.String())
+	out.WriteString(";")
+	return out.String()
+}

@@ -20,5 +20,9 @@ func (e *Environment) Get(name string) (Value, bool) {
 
 func (e *Environment) Set(name string, val Value) Value {
 	e.store[name] = val
+	if e.outer != nil {
+		return e.outer.Set(name, val)
+	}
+
 	return val
 }
