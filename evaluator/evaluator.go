@@ -58,6 +58,8 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 		return evalBlockStatement(node, env)
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
+	case *ast.ForExpression:
+		return evalForExpression(node, env)
 	case *ast.ReturnStatement:
 		val := Eval(node.ReturnValue, env)
 		if isError(val) {
@@ -224,9 +226,18 @@ func evalIntegerInfixExpression(op string, left, right value.Value) value.Value 
 		return booleanValue(leftVal == rightVal)
 	case "!=":
 		return booleanValue(leftVal != rightVal)
+	case "..":
+		return rangeValue(leftVal, rightVal)
 	default:
 		return newError("unknown operator: %s %s %s", left.Type(), op, right.Type())
 	}
+}
+
+func rangeValue(left, right int64) value.Value {
+	if left == right {
+		return newError("range start and end must be different: %d..%d", left, right)
+	}
+	return &value.Range{Start: left, End: right}
 }
 
 func evalIfExpression(ie *ast.IfExpression, env *value.Environment) value.Value {
@@ -242,6 +253,86 @@ func evalIfExpression(ie *ast.IfExpression, env *value.Environment) value.Value 
 	} else {
 		return NIL
 	}
+}
+
+func evalForExpression(exp *ast.ForExpression, env *value.Environment) value.Value {
+	switch condition := exp.Condition.(type) {
+	case *ast.InExpression:
+		elementIdentifier, ok := condition.Element.(*ast.Identifier)
+		if !ok {
+			return newError("expected identifier on left side of in-expression. got=%T", condition.Element)
+		}
+
+		iterable := Eval(condition.Iterable, env)
+		if isError(iterable) {
+			return iterable
+		}
+
+		switch iterable := iterable.(type) {
+		case *value.Range:
+			evalForLoopRange(elementIdentifier, iterable, exp.Body, env)
+		case *value.Array:
+			evalForLoopArray(elementIdentifier, iterable, exp.Body, env)
+		default:
+			return newError("for-loop not supported for type %s", iterable.Type())
+		}
+	default:
+		return newError("invalid %T expression in for-loop", exp.Condition)
+	}
+
+	return NIL
+}
+
+func evalForLoopArray(
+	elementIdentifier *ast.Identifier,
+	array *value.Array,
+	body *ast.BlockStatment,
+	env *value.Environment,
+) value.Value {
+	loopEnv := extendEnv(env, []*ast.Identifier{elementIdentifier}, []value.Value{NIL})
+	for _, element := range array.Elements {
+		loopEnv.Set(elementIdentifier.Value, element)
+		r := evalBlockStatement(body, loopEnv)
+		if isError(r) {
+			return r
+		}
+	}
+	return NIL
+}
+
+func evalForLoopRange(
+	elementIdentifier *ast.Identifier,
+	rangeVal *value.Range,
+	body *ast.BlockStatment,
+	env *value.Environment,
+) value.Value {
+	ascDirection := true
+	if rangeVal.End < rangeVal.Start {
+		ascDirection = false
+	}
+
+	currentValue := value.Integer{Value: rangeVal.Start}
+	loopEnv := extendEnv(env, []*ast.Identifier{elementIdentifier}, []value.Value{NIL})
+	loopEnv.Set(elementIdentifier.Value, &currentValue)
+	loopCounter := 0
+
+	for currentValue.Value != rangeVal.End {
+		if loopCounter > 10000 {
+			return newError("max loop call exceed")
+		}
+
+		e := evalBlockStatement(body, loopEnv)
+		if isError(e) {
+			return e
+		}
+		if ascDirection {
+			currentValue.Value++
+		} else {
+			currentValue.Value--
+		}
+		loopCounter++
+	}
+	return NIL
 }
 
 func evalIdentifier(node *ast.Identifier, env *value.Environment) value.Value {
@@ -362,10 +453,14 @@ func evalHashIndexExpression(hash, index value.Value) value.Value {
 }
 
 func extendFunctionEnv(fn *value.Function, args []value.Value) *value.Environment {
-	env := value.NewEnvironment(fn.Env)
+	return extendEnv(fn.Env, fn.Parameters, args)
+}
 
-	for i, param := range fn.Parameters {
-		env.Set(param.Value, args[i])
+func extendEnv(currentEnv *value.Environment, identifiers []*ast.Identifier, values []value.Value) *value.Environment {
+	env := value.NewEnvironment(currentEnv)
+
+	for i, identifier := range identifiers {
+		env.Set(identifier.Value, values[i])
 	}
 
 	return env

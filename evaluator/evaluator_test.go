@@ -250,6 +250,10 @@ func TestErrorHandling(t *testing.T) {
 			`7 |> 0;`,
 			"expected FUNCTION in pipiline expression. got=*ast.IntegerLiteral",
 		},
+		{
+			"1..1",
+			"range start and end must be different: 1..1",
+		},
 	}
 
 	for _, tt := range tests {
@@ -334,6 +338,31 @@ func TestFunctionPipeline(t *testing.T) {
 
 	for _, tt := range tests {
 		testIntegerValue(t, testEval(tt.input), tt.expected)
+	}
+}
+
+func TestRangeExpression(t *testing.T) {
+	tests := []struct {
+		input         string
+		expectedStart int64
+		expectedEnd   int64
+	}{
+		{"1..10", 1, 10},
+		{"10..1", 10, 1},
+		{"(-7)..0", -7, 0},
+	}
+
+	for _, tt := range tests {
+		val := testEval(tt.input)
+		rangeVal, ok := val.(*value.Range)
+		if !ok {
+			t.Errorf("val is not *value.Range. got=%T %s", val, val)
+			continue
+		}
+
+		if tt.expectedStart != rangeVal.Start || tt.expectedEnd != rangeVal.End {
+			t.Errorf("wrong Range boundaries. got=%d..%d, want=%d..%d", rangeVal.Start, rangeVal.End, tt.expectedStart, tt.expectedEnd)
+		}
 	}
 }
 
@@ -531,4 +560,10 @@ func TestHasIndexExpression(t *testing.T) {
 			testIntegerValue(t, evaluated, int64(val))
 		}
 	}
+}
+
+func TestForLoop(t *testing.T) {
+	input := "let a = 0; for (i in 1..11) { let a = a + i; }; a;"
+	evaluated := testEval(input)
+	testIntegerValue(t, evaluated, 55)
 }
