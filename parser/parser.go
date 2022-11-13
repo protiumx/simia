@@ -13,16 +13,20 @@ import (
 const (
 	LOWEST = iota + 1
 	PIPELINE
+	ASSIGN
 	EQUALS
 	LESS_GREATER
 	SUM
 	PRODUCT
 	PREFIX
+	RANGE
+	IN
 	CALL
 	INDEX
 )
 
 var precedences = map[token.TokenType]int{
+	token.ASSIGN:   ASSIGN,
 	token.EQ:       EQUALS,
 	token.NOT_EQ:   EQUALS,
 	token.LT:       LESS_GREATER,
@@ -33,7 +37,9 @@ var precedences = map[token.TokenType]int{
 	token.ASTERISK: PRODUCT,
 	token.LPAREN:   CALL,
 	token.LBRACKET: INDEX,
+	token.RANGE:    RANGE,
 	token.PIPELINE: PIPELINE,
+	token.IN:       IN,
 }
 
 type Parser struct {
@@ -62,6 +68,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.FALSE, p.parseBoolean)
 	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(token.IF, p.parseIfExpression)
+	p.registerPrefix(token.FOR, p.parseForExpression)
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
 	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
@@ -77,8 +84,10 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.LT, p.parseInfixExpression)
 	p.registerInfix(token.GT, p.parseInfixExpression)
 	p.registerInfix(token.PIPELINE, p.parseInfixExpression)
+	p.registerInfix(token.RANGE, p.parseInfixExpression)
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
 	p.registerInfix(token.LBRACKET, p.parseIndexExpression)
+	p.registerInfix(token.IN, p.parseInExpression)
 
 	// Set values for current and peak
 	p.nextToken()
@@ -169,6 +178,11 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
+	if p.currentToken.Type == token.ILLEGAL {
+		p.errors = append(p.errors, fmt.Sprintf("illegal token `%s`", p.currentToken.Literal))
+		return nil
+	}
+
 	prefix := p.prefixParseFns[p.currentToken.Type]
 	if prefix == nil {
 		p.missingPrefixParseFn(p.currentToken.Type)
@@ -269,6 +283,27 @@ func (p *Parser) parseIfExpression() ast.Expression {
 		expression.Alternative = p.parseBlockStatement()
 	}
 	return expression
+}
+
+func (p *Parser) parseForExpression() ast.Expression {
+	exp := &ast.ForExpression{Token: p.currentToken}
+
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+
+	p.nextToken()
+	exp.Condition = p.parseExpression(LOWEST)
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+
+	exp.Body = p.parseBlockStatement()
+	return exp
 }
 
 func (p *Parser) parseBlockStatement() *ast.BlockStatment {
@@ -405,6 +440,13 @@ func (p *Parser) parseHashLiteral() ast.Expression {
 	return hash
 }
 
+func (p *Parser) parseInExpression(element ast.Expression) ast.Expression {
+	exp := &ast.InExpression{Token: p.currentToken, Element: element}
+	p.nextToken()
+	exp.Iterable = p.parseExpression(LOWEST)
+	return exp
+}
+
 func (p *Parser) currentTokenIs(t token.TokenType) bool {
 	return p.currentToken.Type == t
 }
@@ -429,6 +471,7 @@ func (p *Parser) currentPrecedence() int {
 	return LOWEST
 }
 
+// expectPeek checks next token and advances if matches, else appends an error
 func (p *Parser) expectPeek(t token.TokenType) bool {
 	if p.peekTokenIs(t) {
 		p.nextToken()

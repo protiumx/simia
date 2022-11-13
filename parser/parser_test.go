@@ -212,6 +212,7 @@ func TestParsingInfixExpressions(t *testing.T) {
 		{"true != false", true, "!=", false},
 		{"false == false", false, "==", false},
 		{" 7 |> double()", 7, "|>", "double"},
+		{"1..10", 1, "..", 10},
 	}
 
 	for _, tt := range infixTests {
@@ -236,6 +237,37 @@ func TestParsingInfixExpressions(t *testing.T) {
 			return
 		}
 	}
+}
+
+func TestInExpression(t *testing.T) {
+	input := "i in 0..10"
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	inExp, ok := stmt.Expression.(*ast.InExpression)
+	if !ok {
+		t.Fatalf("expression is not *ast.InExpression. got=%T", stmt.Expression)
+	}
+
+	if !testIdentifier(t, inExp.Element, "i") {
+		return
+	}
+
+	testInfixExpression(t, inExp.Iterable, 0, "..", 10)
 }
 
 func TestOperatorPrecedenceParsing(t *testing.T) {
@@ -359,6 +391,14 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"7 |> add(8 * 8)",
 			"(7 |> add((8 * 8)))",
 		},
+		{
+			"1..10",
+			"(1 .. 10)",
+		},
+		{
+			"(1-1)..(10*4)",
+			"((1 - 1) .. (10 * 4))",
+		},
 	}
 
 	for _, tt := range tests {
@@ -420,7 +460,7 @@ func TestIfExpression(t *testing.T) {
 	checkParserErrors(t, p)
 
 	if len(program.Statements) != 1 {
-		t.Fatalf("program.Body does not contain %d statements. got=%d\n",
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
 			1, len(program.Statements))
 	}
 
@@ -458,6 +498,46 @@ func TestIfExpression(t *testing.T) {
 	if exp.Alternative != nil {
 		t.Errorf("exp.Alternative.Statements was not nil. got=%+v", exp.Alternative)
 	}
+}
+
+func TestForExpression(t *testing.T) {
+	input := `for (x < y) { 1; }`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Body does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	exp, ok := stmt.Expression.(*ast.ForExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.ForExpression. got=%T", stmt.Expression)
+	}
+
+	if !testInfixExpression(t, exp.Condition, "x", "<", "y") {
+		return
+	}
+
+	if len(exp.Body.Statements) != 1 {
+		t.Errorf("consequence is not 1 statements. got=%d\n", len(exp.Body.Statements))
+	}
+
+	bodyExp, ok := exp.Body.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Statements[0] is not ast.ExpressionStatement. got=%T", exp.Body.Statements[0])
+	}
+
+	testIntegerLiteral(t, bodyExp.Expression, 1)
 }
 
 func TestIfElseExpression(t *testing.T) {
