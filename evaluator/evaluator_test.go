@@ -126,12 +126,12 @@ func TestIfElseExpression(t *testing.T) {
 		input    string
 		expected any
 	}{
-		{"if (true) { 10 }", 10},
-		{"if (false) { 10 }", nil},
-		{"if (1) { 10 }", 10},
-		{"if (1 < 2) { 10 }", 10},
-		{"if (1 > 2) { 10 }", nil},
-		{"if (1 > 2) { 10 } else { 20 }", 20},
+		{"if true { 10 }", 10},
+		{"if false { 10 }", nil},
+		{"if 1 { 10 }", 10},
+		{"if 1 < 2 { 10 }", 10},
+		{"if 1 > 2 { 10 }", nil},
+		{"if 1 > 2 { 10 } else { 20 }", 20},
 	}
 	for _, tt := range tests {
 		evaluated := testEval(tt.input)
@@ -162,7 +162,7 @@ func TestReturnStatements(t *testing.T) {
 		{"return 2 * 5; 9;", 10},
 		{"9; return 2 * 5; 9;", 10},
 		{`
-    if (10 > 1) { 
+    if 10 > 1 { 
       if (10 > 2) { 
         return 10; 
       } 
@@ -227,10 +227,11 @@ func TestErrorHandling(t *testing.T) {
 		{
 			`
     if (10 > 1) {
-      if (10 > 1) {
+      if 10 > 1 {
         return true + false;
       }
-    return 1; }
+      return 1; 
+    }
     `,
 			"unknown operator: BOOLEAN + BOOLEAN",
 		},
@@ -579,11 +580,11 @@ func TestForLoop(t *testing.T) {
 		input         string
 		expectedValue int64
 	}{
-		{"let a = 0; for (i in 1..11) { a = a + i; } a;", 55},
-		{"let a = 0; for (false) { a = a + 1; } a;", 0},
-		{"let a = 3; for (a) { a = a - 1; } a;", 0},
-		{"let a = 0; for (e in [1, 1]) { a = a + e } a;", 2},
-		{"let arr = []; let a = 0; for (i in arr) { a = a + i; } a;", 0},
+		{"let a = 0; for i in 1..11 { a = a + i; } a;", 55},
+		{"let a = 0; for false { a = a + 1; } a;", 0},
+		{"let a = 3; for a { a = a - 1; } a;", 0},
+		{"let a = 0; for e in [1, 1] { a = a + e } a;", 2},
+		{"let arr = []; let a = 0; for i in arr { a = a + i; } a;", 0},
 	}
 	for _, tt := range tests {
 		evaluated := testEval(tt.input)
