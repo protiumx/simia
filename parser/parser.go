@@ -260,13 +260,15 @@ func (p *Parser) parseIfExpression() ast.Expression {
 	expression := &ast.IfExpression{
 		Token: p.currentToken,
 	}
-	if !p.expectPeek(token.LPAREN) {
-		return nil
+	openParen := false
+	if p.peekTokenIs(token.LPAREN) {
+		p.nextToken()
+		openParen = true
 	}
 
 	p.nextToken()
 	expression.Condition = p.parseExpression(LOWEST)
-	if !p.expectPeek(token.RPAREN) {
+	if openParen && !p.expectPeek(token.RPAREN) {
 		return nil
 	}
 
@@ -289,13 +291,15 @@ func (p *Parser) parseIfExpression() ast.Expression {
 func (p *Parser) parseForExpression() ast.Expression {
 	exp := &ast.ForExpression{Token: p.currentToken}
 
-	if !p.expectPeek(token.LPAREN) {
-		return nil
+	openParen := false
+	if p.peekTokenIs(token.LPAREN) {
+		p.nextToken()
+		openParen = true
 	}
 
 	p.nextToken()
 	exp.Condition = p.parseExpression(LOWEST)
-	if !p.expectPeek(token.RPAREN) {
+	if openParen && !p.expectPeek(token.RPAREN) {
 		return nil
 	}
 
