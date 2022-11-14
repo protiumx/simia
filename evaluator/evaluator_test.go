@@ -379,6 +379,14 @@ func TestClosures(t *testing.T) {
   addTwo(2);
   `
 	testIntegerValue(t, testEval(input), 4)
+
+	input = `
+  let a = 0;
+  let mod = fn() { a = 1; };
+  mod();
+  a;
+  `
+	testIntegerValue(t, testEval(input), 1)
 }
 
 func TestStringLiteral(t *testing.T) {
@@ -567,13 +575,24 @@ func TestHasIndexExpression(t *testing.T) {
 }
 
 func TestForLoop(t *testing.T) {
-	input := "let a = 0; for (i in 1..11) { a = a + i; } a;"
-	evaluated := testEval(input)
-	testIntegerValue(t, evaluated, 55)
+	tests := []struct {
+		input         string
+		expectedValue int64
+	}{
+		{"let a = 0; for (i in 1..11) { a = a + i; } a;", 55},
+		{"let a = 0; for (false) { a = a + 1; } a;", 0},
+		{"let a = 3; for (a) { a = a - 1; } a;", 0},
+		{"let a = 0; for (e in [1, 1]) { a = a + e } a;", 2},
+		{"let arr = []; let a = 0; for (i in arr) { a = a + i; } a;", 0},
+	}
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		testIntegerValue(t, evaluated, tt.expectedValue)
+	}
 }
 
 func TestAssign(t *testing.T) {
-	input := "let foo = 10; foo = foo + 1; foo;"
+	input := "let foo = 10; foo = foo - 1; foo;"
 	evaluated := testEval(input)
-	testIntegerValue(t, evaluated, 11)
+	testIntegerValue(t, evaluated, 9)
 }

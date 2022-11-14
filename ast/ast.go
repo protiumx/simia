@@ -449,6 +449,5 @@ func (ae *AssignExpression) String() string {
 	out.WriteString(ae.Identifier.String())
 	out.WriteString(" = ")
 	out.WriteString(ae.Value.String())
-	out.WriteString(";")
 	return out.String()
 }

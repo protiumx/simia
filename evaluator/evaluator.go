@@ -8,6 +8,8 @@ import (
 	"protiumx.dev/simia/value"
 )
 
+const loopLimit = 10000
+
 var (
 	NIL   = &value.Nil{}
 	TRUE  = &value.Boolean{Value: true}
@@ -18,21 +20,28 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 	switch node := node.(type) {
 	case *ast.Program:
 		return evalProgram(node, env)
+
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression, env)
+
 	case *ast.IntegerLiteral:
 		return &value.Integer{Value: node.Value}
+
 	case *ast.StringLiteral:
 		return &value.String{Value: node.Value}
+
 	case *ast.Boolean:
 		return booleanValue(node.Value)
+
 	case *ast.PrefixExpression:
 		right := Eval(node.Right, env)
 		if isError(right) {
 			return right
 		}
 		return evalPrefixExpression(node.Operator, right)
+
 	case *ast.InfixExpression:
+		fmt.Printf("evaluating infix %+v\n", node)
 		// Eval pipiline expression
 		if node.Operator == token.PIPELINE {
 			fnCall, ok := node.Right.(*ast.CallExpression)
@@ -54,30 +63,38 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 			return right
 		}
 		return evalInfixExpression(node.Operator, left, right)
+
 	case *ast.BlockStatment:
 		return evalBlockStatement(node, env)
+
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
+
 	case *ast.ForExpression:
 		return evalForExpression(node, env)
+
 	case *ast.ReturnStatement:
 		val := Eval(node.ReturnValue, env)
 		if isError(val) {
 			return val
 		}
 		return &value.Return{Value: val}
+
 	case *ast.LetStatement:
 		val := Eval(node.Value, env)
 		if isError(val) {
 			return val
 		}
 		env.Set(node.Name.Value, val)
+
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
+
 	case *ast.FunctionLiteral:
 		params := node.Parameters
 		body := node.Body
 		return &value.Function{Parameters: params, Env: env, Body: body}
+
 	case *ast.CallExpression:
 		fn := Eval(node.Function, env)
 		if isError(fn) {
@@ -88,6 +105,7 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 			return args[0]
 		}
 		return applyFunction(fn, args)
+
 	case *ast.ArrayLiteral:
 		elements := evalExpressions(node.Elements, env)
 		if len(elements) == 1 && isError(elements[0]) {
@@ -95,6 +113,7 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 		}
 
 		return &value.Array{Elements: elements}
+
 	case *ast.IndexExpression:
 		left := Eval(node.Left, env)
 		if isError(left) {
@@ -107,8 +126,10 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 		}
 
 		return evalIndexExpression(left, index)
+
 	case *ast.HashLiteral:
 		return evalHashLiteral(node, env)
+
 	case *ast.AssignExpression:
 		val := Eval(node.Value, env)
 		if isError(val) {
@@ -270,6 +291,7 @@ func evalIfExpression(ie *ast.IfExpression, env *value.Environment) value.Value 
 func evalForExpression(exp *ast.ForExpression, env *value.Environment) value.Value {
 	switch condition := exp.Condition.(type) {
 	case *ast.InExpression:
+		loopEnv := value.NewEnvironment(env)
 		elementIdentifier, ok := condition.Element.(*ast.Identifier)
 		if !ok {
 			return newError("expected identifier on left side of in-expression. got=%T", condition.Element)
@@ -282,17 +304,45 @@ func evalForExpression(exp *ast.ForExpression, env *value.Environment) value.Val
 
 		switch iterable := iterable.(type) {
 		case *value.Range:
-			evalForLoopRange(elementIdentifier, iterable, exp.Body, env)
+			evalForLoopRange(elementIdentifier, iterable, exp.Body, loopEnv)
 		case *value.Array:
-			evalForLoopArray(elementIdentifier, iterable, exp.Body, env)
+			evalForLoopArray(elementIdentifier, iterable, exp.Body, loopEnv)
 		default:
 			return newError("for-loop not supported for type %s", iterable.Type())
 		}
+
+	case *ast.InfixExpression, *ast.Identifier, *ast.Boolean, *ast.IntegerLiteral:
+		loopEnv := value.NewEnvironment(env)
+		return evalForLoopCondition(condition, exp.Body, loopEnv)
 	default:
 		return newError("invalid %T expression in for-loop", exp.Condition)
 	}
 
 	return NIL
+}
+
+func evalForLoopCondition(condition ast.Expression, body *ast.BlockStatment, env *value.Environment) value.Value {
+	loopCounter := 0
+	for {
+		if loopCounter > loopLimit {
+			return newError("max loop call exceed")
+		}
+
+		e := Eval(condition, env)
+		if isError(e) {
+			return e
+		}
+
+		if !isTruthy(e) {
+			return NIL
+		}
+
+		e = evalBlockStatement(body, env)
+		if isError(e) {
+			return e
+		}
+		loopCounter++
+	}
 }
 
 func evalForLoopArray(
@@ -301,10 +351,9 @@ func evalForLoopArray(
 	body *ast.BlockStatment,
 	env *value.Environment,
 ) value.Value {
-	loopEnv := extendEnv(env, []*ast.Identifier{elementIdentifier}, []value.Value{NIL})
 	for _, element := range array.Elements {
-		loopEnv.Set(elementIdentifier.Value, element)
-		r := evalBlockStatement(body, loopEnv)
+		env.Set(elementIdentifier.Value, element)
+		r := evalBlockStatement(body, env)
 		if isError(r) {
 			return r
 		}
@@ -324,16 +373,15 @@ func evalForLoopRange(
 	}
 
 	currentValue := value.Integer{Value: rangeVal.Start}
-	loopEnv := extendEnv(env, []*ast.Identifier{elementIdentifier}, []value.Value{NIL})
-	loopEnv.Set(elementIdentifier.Value, &currentValue)
+	env.Set(elementIdentifier.Value, &currentValue)
 	loopCounter := 0
 
 	for currentValue.Value != rangeVal.End {
-		if loopCounter > 10000 {
+		if loopCounter > loopLimit {
 			return newError("max loop call exceed")
 		}
 
-		e := evalBlockStatement(body, loopEnv)
+		e := evalBlockStatement(body, env)
 		if isError(e) {
 			return e
 		}
@@ -488,13 +536,13 @@ func unwrapReturnValue(val value.Value) value.Value {
 }
 
 func isTruthy(val value.Value) bool {
-	switch val {
-	case NIL, FALSE:
-		return false
-	case TRUE:
-		return true
+	switch val := val.(type) {
+	case *value.Integer:
+		return val.Value != 0
+	case *value.Boolean:
+		return val.Value
 	default:
-		return true
+		return false
 	}
 }
 

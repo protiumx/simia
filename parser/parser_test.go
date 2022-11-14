@@ -399,6 +399,10 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"(1-1)..(10*4)",
 			"((1 - 1) .. (10 * 4))",
 		},
+		{
+			"foo = 1 + foo |> add();",
+			"foo = ((1 + foo) |> add())",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1039,6 +1043,7 @@ func TestParseAssignExpression(t *testing.T) {
 	}{
 		{"foo = 1;", "foo", 1},
 		{"foo = bar;", "foo", "bar"},
+		{"foo = foo + 1;", "foo", &ast.InfixExpression{Left: &ast.Identifier{Value: "foo"}, Right: &ast.IntegerLiteral{Value: 1}, Operator: "+"}},
 	}
 
 	for _, tt := range tests {
@@ -1062,6 +1067,8 @@ func TestParseAssignExpression(t *testing.T) {
 			testIntegerLiteral(t, value, 1)
 		case *ast.Identifier:
 			testIdentifier(t, value, "bar")
+		case *ast.InfixExpression:
+			testInfixExpression(t, value, "foo", "+", 1)
 		}
 	}
 }
