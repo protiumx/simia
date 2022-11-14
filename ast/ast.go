@@ -171,6 +171,29 @@ func (ie *IfExpression) String() string {
 	return out.String()
 }
 
+type ForExpression struct {
+	Token     token.Token
+	Condition Expression
+	Body      *BlockStatment
+}
+
+func (fe *ForExpression) expressionNode() {}
+
+func (fe *ForExpression) TokenLiteral() string {
+	return fe.Token.Literal
+}
+
+func (fe *ForExpression) String() string {
+	var out strings.Builder
+	out.WriteString("for (")
+	out.WriteString(fe.Condition.String())
+	out.WriteString(") {")
+	out.WriteString(fe.Body.String())
+	out.WriteString("}")
+
+	return out.String()
+}
+
 type FunctionLiteral struct {
 	Token      token.Token
 	Parameters []*Identifier
@@ -384,5 +407,47 @@ func (hl *HashLiteral) String() string {
 	out.WriteString(strings.Join(pairs, ", "))
 	out.WriteString("}")
 
+	return out.String()
+}
+
+type InExpression struct {
+	Token    token.Token
+	Element  Expression
+	Iterable Expression // Array or range
+}
+
+func (ie *InExpression) expressionNode() {}
+
+func (ie *InExpression) TokenLiteral() string {
+	return ie.Token.Literal
+}
+
+func (ie *InExpression) String() string {
+	var out strings.Builder
+	out.WriteString("(")
+	out.WriteString(ie.Element.String())
+	out.WriteString(" in ")
+	out.WriteString(ie.Iterable.String())
+	out.WriteString(")")
+	return out.String()
+}
+
+type AssignExpression struct {
+	Token      token.Token
+	Identifier *Identifier
+	Value      Expression
+}
+
+func (ae *AssignExpression) expressionNode() {}
+
+func (ae *AssignExpression) TokenLiteral() string {
+	return ae.Token.Literal
+}
+
+func (ae *AssignExpression) String() string {
+	var out strings.Builder
+	out.WriteString(ae.Identifier.String())
+	out.WriteString(" = ")
+	out.WriteString(ae.Value.String())
 	return out.String()
 }

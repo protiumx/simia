@@ -250,6 +250,14 @@ func TestErrorHandling(t *testing.T) {
 			`7 |> 0;`,
 			"expected FUNCTION in pipiline expression. got=*ast.IntegerLiteral",
 		},
+		{
+			"1..1",
+			"range start and end must be different: 1..1",
+		},
+		{
+			"a = 11;",
+			"error assigning undeclared variable \"a\"",
+		},
 	}
 
 	for _, tt := range tests {
@@ -337,6 +345,31 @@ func TestFunctionPipeline(t *testing.T) {
 	}
 }
 
+func TestRangeExpression(t *testing.T) {
+	tests := []struct {
+		input         string
+		expectedStart int64
+		expectedEnd   int64
+	}{
+		{"1..10", 1, 10},
+		{"10..1", 10, 1},
+		{"(-7)..0", -7, 0},
+	}
+
+	for _, tt := range tests {
+		val := testEval(tt.input)
+		rangeVal, ok := val.(*value.Range)
+		if !ok {
+			t.Errorf("val is not *value.Range. got=%T %s", val, val)
+			continue
+		}
+
+		if tt.expectedStart != rangeVal.Start || tt.expectedEnd != rangeVal.End {
+			t.Errorf("wrong Range boundaries. got=%d..%d, want=%d..%d", rangeVal.Start, rangeVal.End, tt.expectedStart, tt.expectedEnd)
+		}
+	}
+}
+
 func TestClosures(t *testing.T) {
 	input := `
   let newAdder = fn(x) {
@@ -346,6 +379,14 @@ func TestClosures(t *testing.T) {
   addTwo(2);
   `
 	testIntegerValue(t, testEval(input), 4)
+
+	input = `
+  let a = 0;
+  let mod = fn() { a = 1; };
+  mod();
+  a;
+  `
+	testIntegerValue(t, testEval(input), 1)
 }
 
 func TestStringLiteral(t *testing.T) {
@@ -531,4 +572,27 @@ func TestHasIndexExpression(t *testing.T) {
 			testIntegerValue(t, evaluated, int64(val))
 		}
 	}
+}
+
+func TestForLoop(t *testing.T) {
+	tests := []struct {
+		input         string
+		expectedValue int64
+	}{
+		{"let a = 0; for (i in 1..11) { a = a + i; } a;", 55},
+		{"let a = 0; for (false) { a = a + 1; } a;", 0},
+		{"let a = 3; for (a) { a = a - 1; } a;", 0},
+		{"let a = 0; for (e in [1, 1]) { a = a + e } a;", 2},
+		{"let arr = []; let a = 0; for (i in arr) { a = a + i; } a;", 0},
+	}
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		testIntegerValue(t, evaluated, tt.expectedValue)
+	}
+}
+
+func TestAssign(t *testing.T) {
+	input := "let foo = 10; foo = foo - 1; foo;"
+	evaluated := testEval(input)
+	testIntegerValue(t, evaluated, 9)
 }

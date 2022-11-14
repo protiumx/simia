@@ -36,7 +36,7 @@ const (
 	LBRACKET  = "["
 	RBRACKET  = "]"
 	COLON     = ":"
-	PIPE      = "|"
+	RANGE     = ".."
 
 	// Keywords
 	FUNCTION = "FUNCTION"
@@ -46,6 +46,8 @@ const (
 	IF       = "IF"
 	ELSE     = "ELSE"
 	RETURN   = "RETURN"
+	FOR      = "FOR"
+	IN       = "IN"
 )
 
 var keywords = map[string]TokenType{
@@ -56,6 +58,8 @@ var keywords = map[string]TokenType{
 	"if":     IF,
 	"else":   ELSE,
 	"return": RETURN,
+	"for":    FOR,
+	"in":     IN,
 }
 
 type Token struct {

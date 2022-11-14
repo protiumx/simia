@@ -60,10 +60,9 @@ func (l *Lexer) NextToken() token.Token {
 	case ':':
 		ret = newToken(token.COLON, l.currentChar)
 	case '|':
-		ret = l.getOneOrTwoCharToken('>', token.PIPE, token.PIPELINE)
-		if ret.Literal == token.PIPE {
-			ret = newToken(token.ILLEGAL, l.currentChar)
-		}
+		ret = l.getTwoCharToken('>', token.PIPELINE)
+	case '.':
+		ret = l.getTwoCharToken('.', token.RANGE)
 	case '"':
 		ret.Type = token.STRING
 		ret.Literal = l.readString()
@@ -154,6 +153,16 @@ func (l *Lexer) getOneOrTwoCharToken(secondChar byte, oneCharType, twoCharType t
 		return token.Token{Type: twoCharType, Literal: fmt.Sprintf("%c%c", char, l.currentChar)}
 	}
 	return newToken(oneCharType, l.currentChar)
+}
+
+func (l *Lexer) getTwoCharToken(secondChar byte, tokenType token.TokenType) token.Token {
+	if l.peekChar() != secondChar {
+		return newToken(token.ILLEGAL, l.currentChar)
+	}
+
+	char := l.currentChar
+	l.readChar()
+	return token.Token{Type: tokenType, Literal: fmt.Sprintf("%c%c", char, l.currentChar)}
 }
 
 func isLetter(char byte) bool {

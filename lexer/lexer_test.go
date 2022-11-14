@@ -29,6 +29,11 @@ func TestNextToken(t *testing.T) {
   "\"escaped\"";
   [1, 2];
   {"key": "value"};
+  1 |> add(2);
+  1..3;
+  for(true) {
+  }
+  foo = 6;
 `
 
 	tests := []struct {
@@ -125,6 +130,27 @@ func TestNextToken(t *testing.T) {
 		{token.COLON, ":"},
 		{token.STRING, "value"},
 		{token.RBRACE, "}"},
+		{token.SEMICOLON, ";"},
+		{token.INT, "1"},
+		{token.PIPELINE, "|>"},
+		{token.IDENT, "add"},
+		{token.LPAREN, "("},
+		{token.INT, "2"},
+		{token.RPAREN, ")"},
+		{token.SEMICOLON, ";"},
+		{token.INT, "1"},
+		{token.RANGE, ".."},
+		{token.INT, "3"},
+		{token.SEMICOLON, ";"},
+		{token.FOR, "for"},
+		{token.LPAREN, "("},
+		{token.TRUE, "true"},
+		{token.RPAREN, ")"},
+		{token.LBRACE, "{"},
+		{token.RBRACE, "}"},
+		{token.IDENT, "foo"},
+		{token.ASSIGN, "="},
+		{token.INT, "6"},
 		{token.SEMICOLON, ";"},
 		{token.EOF, ""},
 	}

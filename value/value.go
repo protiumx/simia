@@ -20,6 +20,9 @@ const (
 	BUILTIN_VALUE            = "BUILTIN"
 	ARRAY_VALUE              = "ARRAY"
 	HASH_VALUE               = "HASH"
+	RANGE_VALUE              = "RANGE"
+	// For expressions that do not return a value
+	EMPTY_VALUE = "EMPTY"
 )
 
 type Value interface {
@@ -181,5 +184,24 @@ func (h *Hash) Inspect() string {
 	out.WriteString("{")
 	out.WriteString(strings.Join(pairs, ", "))
 	out.WriteString("}")
+	return out.String()
+}
+
+type Range struct {
+	Start int64
+	End   int64
+}
+
+func (r *Range) Type() ValueType {
+	return RANGE_VALUE
+}
+
+func (r *Range) Inspect() string {
+	var out strings.Builder
+	out.WriteString("[")
+	out.WriteString(fmt.Sprintf("%d", r.Start))
+	out.WriteString("..")
+	out.WriteString(fmt.Sprintf("%d", r.End))
+	out.WriteString("]")
 	return out.String()
 }
