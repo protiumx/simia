@@ -57,6 +57,15 @@ for el in ["hello", "universe"] {
 }
 ```
 
+### Pipe operator
+```
+let add = fn(x, y) { x + y };
+let multiply = fn(x, y) { x * y };
+let foo = 1 + 2 |> add(8) |> multiply(2)
+>> foo
+22
+```
+
 ### Builtin functions
 - `len(<iterable>)`: Returns length of iterable (string, array, range)
 - `log(...args)`: Prints arguments to the standard output followed by a new line
