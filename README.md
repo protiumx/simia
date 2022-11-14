@@ -1,9 +1,10 @@
 # simia
 
-[![CI](https://github.com/protiumx/simia/actions/workflows/ci.yml/badge.svg)](https://github.com/protiumx/simia/actions/workflows/ci.yml)
+<img src="./img/simia.png" width="100" />
 
-<img class="center" src="./img/simia.png" width="100" />
 > Created with https://www.craiyon.com/ and manually vectorized in Figma
+
+[![CI](https://github.com/protiumx/simia/actions/workflows/ci.yml/badge.svg)](https://github.com/protiumx/simia/actions/workflows/ci.yml)
 
 Go implementation of the Monkey language interpreter from the book [Writing an interpreter in Go](https://interpreterbook.com/)
 
