@@ -47,4 +47,4 @@ jobs:
         run : GOOS=js GOARCH=wasm go vet ./cmd/wasm/
 
       - name: Test
-        run: go test -count=1 -race -timeout 10s -v ./...
+        run: go test -count=1 -race -timeout 10s -v `go list ./... | grep -v wasm`

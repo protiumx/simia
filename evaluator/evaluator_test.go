@@ -237,7 +237,7 @@ func TestErrorHandling(t *testing.T) {
 		},
 		{
 			"foo;",
-			"identifier not found: foo",
+			"foo not defined",
 		},
 		{
 			`"simia" - "sim"`,
@@ -249,7 +249,7 @@ func TestErrorHandling(t *testing.T) {
 		},
 		{
 			`7 |> 0;`,
-			"expected FUNCTION in pipiline expression. got=*ast.IntegerLiteral",
+			"expected function call in pipiline expression. got=*ast.IntegerLiteral",
 		},
 		{
 			"1..1",
