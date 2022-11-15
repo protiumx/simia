@@ -5,7 +5,7 @@
 *.so
 *.dylib
 
-.DS_Store
+**/.DS_Store
 
 bin/
 cmd/wasm/js/wasm_exec.js
