@@ -41,12 +41,11 @@ func Eval(node ast.Node, env *value.Environment) value.Value {
 		return evalPrefixExpression(node.Operator, right)
 
 	case *ast.InfixExpression:
-		fmt.Printf("evaluating infix %+v\n", node)
 		// Eval pipiline expression
 		if node.Operator == token.PIPELINE {
 			fnCall, ok := node.Right.(*ast.CallExpression)
 			if !ok {
-				return newError("expected %s in pipiline expression. got=%T", token.FUNCTION, node.Right)
+				return newError("expected function call in pipiline expression. got=%T", node.Right)
 			}
 			// prepend the left node to the fn arguments
 			fnCall.Arguments = append([]ast.Expression{node.Left}, fnCall.Arguments...)
@@ -405,7 +404,7 @@ func evalIdentifier(node *ast.Identifier, env *value.Environment) value.Value {
 		return builtin
 	}
 
-	return newError("identifier not found: " + node.Value)
+	return newError("%s not defined", node.Value)
 }
 
 func evalExpressions(exps []ast.Expression, env *value.Environment) []value.Value {
