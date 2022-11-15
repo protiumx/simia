@@ -40,8 +40,11 @@ jobs:
       - name: Go fmt
         run : go fmt $(go list ./...)
 
-      - name: Go vet
-        run : go vet ./...
+      - name: Go vet REPL
+        run : go vet ./cmd/repl/
+
+      - name: Go vet WASM
+        run : GOOS=js GOARCH=wasm go vet ./cmd/wasm/
 
       - name: Test
         run: go test -count=1 -race -timeout 10s -v ./...
