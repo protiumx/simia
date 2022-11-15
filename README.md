@@ -10,9 +10,8 @@ Go implementation of the Monkey language interpreter from the book [Writing an i
 
 > *NOTE*: this repo is work in progress
 
-## Extending Monkey
-I have extended and took some different decisions while designing the `simia` language
-
+## Differences from Monkey
+I have extended and took some different design decisions while designing the `simia` language:
 - No `nil` value supported. Variables must always be defined with the supported types
 - Added `Range` support defined by start and end integers
 - Added support for `in` operator
@@ -20,10 +19,18 @@ I have extended and took some different decisions while designing the `simia` la
 - Parentheses are optional for `if` and `for` blocks
 - Added `|>` operator (borrowed from [elixir](https://elixirschool.com/en/lessons/basics/pipe_operator))
 
+## Development
+See available helpers commands for development in the [Makefile](./Makefile)
+
 ## Usage
 Run the REPL
-```go
-go run main
+```sh
+make run
+```
+
+Run the wasm example and open http://localhost:8080
+```sh
+make run-wasm
 ```
 
 ## Syntax
@@ -35,9 +42,9 @@ foo = "bar";
 
 ### Arithmetic expressions
 ```
-let a = 13;
+let a = 13 + 9;
 let b = 19 * a;
-b = (b / 20) * a;
+b = 7 - (b / 20) * a;
 ```
 
 ### For loops
@@ -49,6 +56,15 @@ for i in 1..10 {
 let i = 0;
 for i < 10 {
   log(i);
+  i = i + 1
+}
+
+let condition = true;
+let stop = fn() { 
+  condition = false;
+}
+for condition {
+  condition = stop();
 }
 
 let ret = ""
@@ -56,6 +72,7 @@ for el in ["hello", "universe"] {
   ret = ret + el
 }
 ```
+For-loops have a limit of 10000 iterations. See [evaluator](./evaluator/evaluator.go)
 
 ### Pipe operator
 ```
@@ -72,13 +89,13 @@ let foo = 1 + 2 |> add(8) |> multiply(2)
 - `append(array)`: Pushes value to the end of the array
 
 ### Types
-Type      | Syntax                                    
---------- | -----------------------------------------
-bool      | `true` | `false`                         
-int       | `0 42 1234 -5`                           
-string    | `"" "foo" "\"quotes\" and a\nline break"`
-array     | `[] [1, 2] [1, 2, 3]`                    
-hash      | `{} {"a": 1} {"a": 1, "b": 2}`         
+Type        | Syntax                                    
+----------- | -----------------------------------------
+`bool`      | `true` | `false`                         
+`int`       | `0 42 1234 -5`                           
+`string`    | `"" "foo" "\"quotes\" and a\nline break"`
+`array`     | `[] [1, 2] [1, 2, 3]`                    
+`hash`      | `{} {"a": 1} {"a": 1, "b": 2, identifier: 0}`         
 
 ## TODO
 - [ ] Add `collumn` and `line` numbers
