@@ -8,3 +8,5 @@
 .DS_Store
 
 bin/
+cmd/wasm/js/wasm_exec.js
+cmd/wasm/*.wasm
