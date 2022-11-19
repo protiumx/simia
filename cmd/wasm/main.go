@@ -11,9 +11,7 @@ import (
 
 var Version = ""
 
-var env = value.NewEnvironment(nil)
-
-func wrapper() js.Func {
+func wrapper(env *value.Environment) js.Func {
 	jsonFunc := js.FuncOf(func(this js.Value, args []js.Value) any {
 		if len(args) != 1 {
 			return "ERROR: invalid arguments"
@@ -39,7 +37,8 @@ func wrapper() js.Func {
 }
 
 func main() {
-	js.Global().Set("simia", wrapper())
+	env := value.NewEnvironment(nil)
+	js.Global().Set("simia", wrapper(env))
 	js.Global().Set("simia_version", js.ValueOf(Version))
 	<-make(chan struct{})
 }
