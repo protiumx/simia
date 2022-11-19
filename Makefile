@@ -8,7 +8,7 @@ build:
 	go build $(LDFLAGS) -o bin/simia cmd/repl/main.go
 
 run:
-	go run main.go
+	go run cmd/repl/main.go
 
 run-wasm: build-wasm
 	@echo "Starting server"
@@ -24,7 +24,7 @@ test:
 .PHONY: cp-wasmjs
 
 cp-wasmjs:
-ifeq (,$(wildcard ./glob.c))
+ifeq (,$(wildcard ./cmd/wasm/js/wasm_exec.js))
 	cp "$(shell go env GOROOT)/misc/wasm/wasm_exec.js" cmd/wasm/js 
 endif
 

@@ -101,6 +101,7 @@ Type        | Syntax
 - [ ] Add `collumn` and `line` numbers
 - [ ] Implement `array` with spread `...` operator
 - [x] Support piping like in Elixir (`|>`)
+- [ ] Use `tinygo` to reduce wasm size
 
 ## License
 
