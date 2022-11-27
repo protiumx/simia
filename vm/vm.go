@@ -47,16 +47,49 @@ func (vm *VM) Run() error {
 				return err
 			}
 
-		case code.OpAdd:
-			right := vm.pop()
-			left := vm.pop()
-			rValue := right.(*value.Integer).Value
-			lValue := left.(*value.Integer).Value
-			vm.push(&value.Integer{Value: lValue + rValue})
+		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv:
+			err := vm.execBinaryOp(op)
+			if err != nil {
+				return err
+			}
+		case code.OpPop:
+			vm.pop()
 		}
 	}
 
 	return nil
+}
+
+func (vm *VM) execBinaryOp(op code.Opcode) error {
+	right := vm.pop()
+	left := vm.pop()
+
+	if left.Type() == value.INTEGER_VALUE && right.Type() == value.INTEGER_VALUE {
+		return vm.execBinaryIntegerOp(op, left, right)
+	}
+
+	return fmt.Errorf("unsupported types for binary operation: %s %d %s", left.Type(), op, right.Type())
+}
+
+func (vm *VM) execBinaryIntegerOp(op code.Opcode, left, right value.Value) error {
+	lValue := left.(*value.Integer).Value
+	rValue := right.(*value.Integer).Value
+	var result int64
+
+	switch op {
+	case code.OpAdd:
+		result = lValue + rValue
+	case code.OpSub:
+		result = lValue - rValue
+	case code.OpMul:
+		result = lValue * rValue
+	case code.OpDiv:
+		result = lValue / rValue
+	default:
+		return fmt.Errorf("unknown integer operator: %d", op)
+	}
+
+	return vm.push(&value.Integer{Value: result})
 }
 
 func (vm *VM) push(v value.Value) error {
@@ -74,4 +107,9 @@ func (vm *VM) pop() value.Value {
 	v := vm.stack[vm.sp-1]
 	vm.sp--
 	return v
+}
+
+// LastPoppedStackElement uses the stack pointer to retrieve the last element that was popped
+func (vm *VM) LastPoppedStackElement() value.Value {
+	return vm.stack[vm.sp]
 }
