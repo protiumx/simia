@@ -71,7 +71,14 @@ func (vm *VM) Run() error {
 			}
 		case code.OpPop:
 			vm.pop()
+
+		case code.OpEqual, code.OpNotEqual, code.OpGreaterThan:
+			err := vm.execComparison(op)
+			if err != nil {
+				return err
+			}
 		}
+
 	}
 
 	return nil
@@ -107,6 +114,44 @@ func (vm *VM) execBinaryIntegerOp(op code.Opcode, left, right value.Value) error
 	}
 
 	return vm.push(&value.Integer{Value: result})
+}
+
+func (vm *VM) execComparison(op code.Opcode) error {
+	right, left := vm.pop(), vm.pop()
+	if left.Type() == value.INTEGER_VALUE && right.Type() == value.INTEGER_VALUE {
+		return vm.execIntegerComparison(op, left, right)
+	}
+
+	switch op {
+	case code.OpEqual:
+		return vm.push(getBoolean(right == left))
+	case code.OpNotEqual:
+		return vm.push(getBoolean(right != left))
+	default:
+		return fmt.Errorf("unknown operator: %d (%s %s)", op, left.Type(), right.Type())
+	}
+}
+
+func (vm *VM) execIntegerComparison(op code.Opcode, left, right value.Value) error {
+	leftVal, rightVal := left.(*value.Integer).Value, right.(*value.Integer).Value
+
+	switch op {
+	case code.OpEqual:
+		return vm.push(getBoolean(rightVal == leftVal))
+	case code.OpNotEqual:
+		return vm.push(getBoolean(rightVal != leftVal))
+	case code.OpGreaterThan:
+		return vm.push(getBoolean(rightVal < leftVal))
+	default:
+		return fmt.Errorf("unknown operator: %d", op)
+	}
+}
+
+func getBoolean(v bool) *value.Boolean {
+	if v {
+		return True
+	}
+	return False
 }
 
 func (vm *VM) push(v value.Value) error {
