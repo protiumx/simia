@@ -82,11 +82,6 @@ func (vm *VM) Run() error {
 			if err != nil {
 				return err
 			}
-		case code.OpMinus:
-			err := vm.execMinusOperator()
-			if err != nil {
-				return err
-			}
 		}
 	}
 
@@ -166,15 +161,6 @@ func (vm *VM) execBangOperator() error {
 	default:
 		return fmt.Errorf("unkown operand %s for Bang operator", operand.Type())
 	}
-}
-
-func (vm *VM) execMinusOperator() error {
-	operand := vm.pop()
-	if operand.Type() != value.INTEGER_VALUE {
-		return fmt.Errorf("unsupported type for negation: %s", operand.Type())
-	}
-	v := operand.(*value.Integer).Value
-	return vm.push(&value.Integer{Value: -v})
 }
 
 func getBoolean(v bool) *value.Boolean {
