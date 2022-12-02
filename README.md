@@ -5,6 +5,7 @@
 > Created with https://www.craiyon.com/ and manually vectorized in Figma
 
 [![CI](https://github.com/protiumx/simia/actions/workflows/ci.yml/badge.svg)](https://github.com/protiumx/simia/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Go implementation of the Monkey language interpreter from the book [Writing an interpreter in Go](https://interpreterbook.com/)
 

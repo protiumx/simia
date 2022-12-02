@@ -39,7 +39,7 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 			t.Fatalf("vm erro: %s", err)
 		}
 
-		stackElement := vm.StackTop()
+		stackElement := vm.LastPoppedStackElement()
 
 		testExpectedValue(t, tt.expected, stackElement)
 	}
@@ -53,6 +53,11 @@ func testExpectedValue(t *testing.T, expected any, actual value.Value) {
 		err := testIntegerValue(int64(expected), actual)
 		if err != nil {
 			t.Errorf("test integer value failed: %s", err)
+		}
+	case bool:
+		err := testBooleanValue(bool(expected), actual)
+		if err != nil {
+			t.Errorf("test bool value failed: %s", err)
 		}
 	}
 }
@@ -70,10 +75,43 @@ func testIntegerValue(expected int64, actual value.Value) error {
 	return nil
 }
 
+func testBooleanValue(expected bool, actual value.Value) error {
+	result, ok := actual.(*value.Boolean)
+	if !ok {
+		return fmt.Errorf("value is not Boolean. got=%T (%+v)", actual, actual)
+	}
+	if result.Value != expected {
+		return fmt.Errorf("value has wrong value. got=%t, want=%t", result.Value, expected)
+	}
+
+	return nil
+}
+
 func TestIntegerAithmetic(t *testing.T) {
 	tests := []vmTestCase{
 		{"1", 1},
 		{"1 + 2", 3},
+		{"1 - 2", -1},
+		{"3 * 2 - (6 / 3)", 4},
+		{"1 * 2 - 3 / 1", -1},
+		{"-50 + 100 + -50", 0},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestBooleanExpressions(t *testing.T) {
+	tests := []vmTestCase{
+		{"true", true},
+		{"false", false},
+		{"1 < 2", true},
+		{"1 > 2", false},
+		{"1 == 1", true},
+		{"1 != 1", false},
+		{"false == false", true},
+		{"(1 < 2) == true", true},
+		{"!true", false},
+		{"!!false", false},
 	}
 
 	runVmTests(t, tests)
