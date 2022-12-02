@@ -233,7 +233,7 @@ func TestBooleanExpressions(t *testing.T) {
 
 		{
 			input:             "!true",
-			expectedConstants: []any{1},
+			expectedConstants: []any{},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpTrue),
 				code.Make(code.OpBang),
