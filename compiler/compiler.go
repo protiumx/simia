@@ -128,7 +128,25 @@ func (c *Compiler) Compile(node ast.Node) error {
 		if c.lastInstructionIsPop() {
 			c.removeLastPop()
 		}
-		c.changeOperandAt(jumpIfBrachPos, len(c.instructions))
+
+		if node.Alternative == nil {
+			c.changeOperandAt(jumpIfBrachPos, len(c.instructions))
+		} else {
+			jumpPos := c.emit(code.OpJump, -1)
+
+			c.changeOperandAt(jumpIfBrachPos, len(c.instructions))
+
+			err := c.Compile(node.Alternative)
+			if err != nil {
+				return err
+			}
+
+			if c.lastInstructionIsPop() {
+				c.removeLastPop()
+			}
+
+			c.changeOperandAt(jumpPos, len(c.instructions))
+		}
 
 	case *ast.BlockStatment:
 		for _, s := range node.Statements {
