@@ -66,6 +66,8 @@ const (
 
 	OpJumpIfBranch
 	OpJump
+
+	OpNil
 )
 
 type Definition struct {
@@ -89,6 +91,7 @@ var definitions = map[Opcode]*Definition{
 	OpBang:         {"OpBang", []int{}},
 	OpJumpIfBranch: {"OpJumpBranch", []int{2}},
 	OpJump:         {"OpJump", []int{2}},
+	OpNil:          {"OpNil", []int{}},
 }
 
 func Lookup(op byte) (*Definition, error) {

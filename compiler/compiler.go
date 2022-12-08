@@ -129,13 +129,14 @@ func (c *Compiler) Compile(node ast.Node) error {
 			c.removeLastPop()
 		}
 
+		jumpPos := c.emit(code.OpJump, -1)
+
+		c.changeOperandAt(jumpIfBrachPos, len(c.instructions))
+
 		if node.Alternative == nil {
-			c.changeOperandAt(jumpIfBrachPos, len(c.instructions))
+			// as if are expressions, the alternative must be a OpNil
+			c.emit(code.OpNil)
 		} else {
-			jumpPos := c.emit(code.OpJump, -1)
-
-			c.changeOperandAt(jumpIfBrachPos, len(c.instructions))
-
 			err := c.Compile(node.Alternative)
 			if err != nil {
 				return err
@@ -145,8 +146,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 				c.removeLastPop()
 			}
 
-			c.changeOperandAt(jumpPos, len(c.instructions))
 		}
+		c.changeOperandAt(jumpPos, len(c.instructions))
 
 	case *ast.BlockStatment:
 		for _, s := range node.Statements {
