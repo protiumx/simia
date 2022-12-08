@@ -13,6 +13,7 @@ const StackSize = (1 << 10) * 2
 var (
 	True  = &value.Boolean{Value: true}
 	False = &value.Boolean{Value: false}
+	Nil   = &value.Nil{}
 )
 
 type VM struct {
@@ -64,6 +65,12 @@ func (vm *VM) Run() error {
 				return err
 			}
 
+		case code.OpNil:
+			err := vm.push(Nil)
+			if err != nil {
+				return err
+			}
+
 		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv:
 			err := vm.execBinaryOp(op)
 			if err != nil {
@@ -72,16 +79,33 @@ func (vm *VM) Run() error {
 		case code.OpPop:
 			vm.pop()
 
+		case code.OpJump:
+			pos := int(code.ReadUint16(vm.instructions[ip+1:]))
+			// account for addition in for loop
+			ip = pos - 1
+
+		case code.OpJumpIfBranch:
+			pos := int(code.ReadUint16(vm.instructions[ip+1:]))
+			// assume condition is truthy
+			ip += 2
+			condition := vm.pop()
+			if !isTruthy(condition) {
+				// jump to else branch
+				ip = pos - 1
+			}
+
 		case code.OpEqual, code.OpNotEqual, code.OpGreaterThan:
 			err := vm.execComparison(op)
 			if err != nil {
 				return err
 			}
+
 		case code.OpBang:
 			err := vm.execBangOperator()
 			if err != nil {
 				return err
 			}
+
 		case code.OpMinus:
 			err := vm.execMinusOperator()
 			if err != nil {
@@ -199,6 +223,19 @@ func (vm *VM) pop() value.Value {
 	v := vm.stack[vm.sp-1]
 	vm.sp--
 	return v
+}
+
+func isTruthy(val value.Value) bool {
+	switch val := val.(type) {
+	case *value.Boolean:
+		return val.Value
+	case *value.Integer:
+		return val.Value != 0
+	case *value.Nil:
+		return false
+	default:
+		return false
+	}
 }
 
 // LastPoppedStackElement uses the stack pointer to retrieve the last element that was popped
