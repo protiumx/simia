@@ -1,6 +1,6 @@
 # simia
 
-<img src="./img/simia.png" width="100" />
+<img src="./assets/simia.png" width="100" />
 
 > Created with https://www.craiyon.com/ and manually vectorized in Figma
 
