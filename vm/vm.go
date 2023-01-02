@@ -8,7 +8,10 @@ import (
 	"protiumx.dev/simia/value"
 )
 
-const StackSize = (1 << 10) * 2
+const (
+	StackSize   = (1 << 10) * 2
+	GlobalsSize = (2 << 15)
+)
 
 var (
 	True  = &value.Boolean{Value: true}
@@ -18,8 +21,9 @@ var (
 
 type VM struct {
 	constants    []value.Value
-	instructions code.Instructions
+	globals      []value.Value
 	stack        []value.Value
+	instructions code.Instructions
 	sp           int // Stack pointer points to next free slot in stack
 }
 
@@ -27,9 +31,16 @@ func New(bytecode *compiler.Bytecode) *VM {
 	return &VM{
 		instructions: bytecode.Instructions,
 		constants:    bytecode.Constants,
+		globals:      make([]value.Value, GlobalsSize),
 		stack:        make([]value.Value, StackSize),
 		sp:           0,
 	}
+}
+
+func NewWithGlobalStore(bytecode *compiler.Bytecode, s []value.Value) *VM {
+	vm := New(bytecode)
+	vm.globals = s
+	return vm
 }
 
 func (vm *VM) StackTop() value.Value {
@@ -108,6 +119,21 @@ func (vm *VM) Run() error {
 
 		case code.OpMinus:
 			err := vm.execMinusOperator()
+			if err != nil {
+				return err
+			}
+
+		case code.OpSetGlobal:
+			gIndex := code.ReadUint16(vm.instructions[ip+1:])
+			ip += 2
+
+			vm.globals[gIndex] = vm.pop()
+
+		case code.OpGetGlobal:
+			gIndex := code.ReadUint16(vm.instructions[ip+1:])
+			ip += 2
+
+			err := vm.push(vm.globals[gIndex])
 			if err != nil {
 				return err
 			}

@@ -8,6 +8,7 @@ import (
 	"protiumx.dev/simia/compiler"
 	"protiumx.dev/simia/lexer"
 	"protiumx.dev/simia/parser"
+	"protiumx.dev/simia/value"
 	"protiumx.dev/simia/vm"
 )
 
@@ -15,6 +16,10 @@ const PROMPT = ">> "
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
+
+	constants := []value.Value{}
+	globals := make([]value.Value, vm.GlobalsSize)
+	symbols := compiler.NewSymbolTable()
 
 	for {
 		fmt.Printf(PROMPT)
@@ -33,14 +38,16 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		comp := compiler.New()
+		comp := compiler.NewWithState(symbols, constants)
 		err := comp.Compile(program)
 		if err != nil {
 			fmt.Fprintf(out, "compilation error:\n %s\n", err)
 			continue
 		}
 
-		v := vm.New(comp.Bytecode())
+		code := comp.Bytecode()
+		constants = code.Constants
+		v := vm.NewWithGlobalStore(code, globals)
 		err = v.Run()
 		if err != nil {
 			fmt.Fprintf(out, "bytecode execution error:\n %s\n", err)
