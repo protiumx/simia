@@ -147,11 +147,28 @@ func (vm *VM) execBinaryOp(op code.Opcode) error {
 	right := vm.pop()
 	left := vm.pop()
 
-	if left.Type() == value.INTEGER_VALUE && right.Type() == value.INTEGER_VALUE {
-		return vm.execBinaryIntegerOp(op, left, right)
+	switch left.Type() {
+	case value.INTEGER_VALUE:
+		if right.Type() == value.INTEGER_VALUE {
+			return vm.execBinaryIntegerOp(op, left, right)
+		}
+
+	case value.STRING_VALUE:
+		if right.Type() == value.STRING_VALUE {
+			return vm.execBinaryStringOp(op, left, right)
+		}
 	}
 
 	return fmt.Errorf("unsupported types for binary operation: %s %d %s", left.Type(), op, right.Type())
+}
+
+func (vm *VM) execBinaryStringOp(op code.Opcode, left, right value.Value) error {
+	if op != code.OpAdd {
+		return fmt.Errorf("unknown string operation: %d", op)
+	}
+
+	l, r := left.(*value.String).Value, right.(*value.String).Value
+	return vm.push(&value.String{Value: l + r})
 }
 
 func (vm *VM) execBinaryIntegerOp(op code.Opcode, left, right value.Value) error {

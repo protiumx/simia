@@ -84,9 +84,27 @@ func testConstants(t *testing.T, expected []any, actual []value.Value) error {
 		case int:
 			err := testIntegerValue(int64(constant), actual[i])
 			if err != nil {
-				return fmt.Errorf("constant %d = testIntegerValue failed: %s", i, err)
+				return fmt.Errorf("constant %d - testIntegerValue failed: %s", i, err)
+			}
+		case string:
+			err := testStringValue(constant, actual[i])
+			if err != nil {
+				return fmt.Errorf("constant %d - testStringValue failed: %s", i, err)
 			}
 		}
+	}
+
+	return nil
+}
+
+func testStringValue(expected string, actual value.Value) error {
+	result, ok := actual.(*value.String)
+	if !ok {
+		return fmt.Errorf("value is not String. got=%T (%+v)", actual, actual)
+	}
+
+	if result.Value != expected {
+		return fmt.Errorf("value has wrong value. got=%q, want=%q", result.Value, expected)
 	}
 
 	return nil
@@ -311,6 +329,32 @@ func TestGlobalLetStatements(t *testing.T) {
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpSetGlobal, 0),
 				code.Make(code.OpGetGlobal, 0),
+				code.Make(code.OpPop),
+			},
+		},
+	}
+
+	runCompilerTests(t, tests)
+}
+
+func TestStringExpressions(t *testing.T) {
+	tests := []compilerTestcase{
+		{
+			input:             `"monkey"`,
+			expectedConstants: []any{"monkey"},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpPop),
+			},
+		},
+
+		{
+			input:             `"mon" + "key"`,
+			expectedConstants: []any{"mon", "key"},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpAdd),
 				code.Make(code.OpPop),
 			},
 		},
