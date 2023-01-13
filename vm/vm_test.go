@@ -64,6 +64,25 @@ func testExpectedValue(t *testing.T, expected any, actual value.Value) {
 		if err != nil {
 			t.Errorf("test string value failed: %s", err)
 		}
+	case []int:
+		arr, ok := actual.(*value.Array)
+		if !ok {
+			t.Errorf("value is not Array: %T (%+v)", actual, actual)
+			return
+		}
+
+		if len(arr.Elements) != len(expected) {
+			t.Errorf("wrong num of elements. want=%d, got=%d", len(expected), len(arr.Elements))
+			return
+		}
+
+		for i, expElement := range expected {
+			err := testIntegerValue(int64(expElement), arr.Elements[i])
+			if err != nil {
+				t.Errorf("testIntegerValue failed: %s", err)
+			}
+		}
+
 	case *value.Nil:
 		if actual != Nil {
 			t.Errorf("test nil is not Nil: %T (%+v)", actual, actual)
@@ -165,6 +184,15 @@ func TestStringExpressions(t *testing.T) {
 	tests := []vmTestCase{
 		{`"monkey"`, "monkey"},
 		{`"mon" + "key"`, "monkey"},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestArrayLiterals(t *testing.T) {
+	tests := []vmTestCase{
+		{"[]", []int{}},
+		{"[1 - 2, 3 * 4]", []int{-1, 12}},
 	}
 
 	runVmTests(t, tests)
