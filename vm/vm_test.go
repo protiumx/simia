@@ -83,6 +83,24 @@ func testExpectedValue(t *testing.T, expected any, actual value.Value) {
 			}
 		}
 
+	case map[string]int64:
+		h, ok := actual.(*value.Hash)
+		if !ok {
+			t.Errorf("value is not Hash. got=%T (%+v)", actual, actual)
+			return
+		}
+		if len(h.Pairs) != len(expected) {
+			t.Errorf("hash has wrong number of pairs. want=%d, got=%d", len(expected), len(h.Pairs))
+			return
+		}
+
+		for k, v := range expected {
+			err := testIntegerValue(v, h.Pairs[k])
+			if err != nil {
+				t.Errorf("testIntegerValue failed: %s", err)
+			}
+		}
+
 	case *value.Nil:
 		if actual != Nil {
 			t.Errorf("test nil is not Nil: %T (%+v)", actual, actual)
@@ -193,6 +211,24 @@ func TestArrayLiterals(t *testing.T) {
 	tests := []vmTestCase{
 		{"[]", []int{}},
 		{"[1 - 2, 3 * 4]", []int{-1, 12}},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestHashListerals(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			"{}", map[string]int64{},
+		},
+		{
+
+			`{"a": 1 * 2, "b": 2+6}`,
+			map[string]int64{
+				"a": 2,
+				"b": 8,
+			},
+		},
 	}
 
 	runVmTests(t, tests)

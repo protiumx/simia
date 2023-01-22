@@ -57,7 +57,7 @@ func testInstructions(expected []code.Instructions, actual code.Instructions) er
 
 	for i, ins := range concatted {
 		if actual[i] != ins {
-			return fmt.Errorf("wrong instruction at %d.\nwant=%q\ngot=%q", i, concatted, actual)
+			return fmt.Errorf("wrong instruction at %d.\nwant\n%s\ngot\n%s", i, concatted, actual)
 		}
 	}
 
@@ -385,6 +385,33 @@ func TestArrayLiterals(t *testing.T) {
 				code.Make(code.OpConstant, 4),
 				code.Make(code.OpMul),
 				code.Make(code.OpArray, 3), // 3 elements in the array
+				code.Make(code.OpPop),
+			},
+		},
+	}
+
+	runCompilerTests(t, tests)
+}
+
+func TestHashLiterals(t *testing.T) {
+	tests := []compilerTestcase{
+		{
+			input:             "{}",
+			expectedConstants: []any{},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpHash, 0),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:             `{"a": 2, "b": 3}`,
+			expectedConstants: []any{"a", 2, "b", 3},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpConstant, 2),
+				code.Make(code.OpConstant, 3),
+				code.Make(code.OpHash, 4),
 				code.Make(code.OpPop),
 			},
 		},
