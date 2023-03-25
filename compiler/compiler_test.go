@@ -57,7 +57,7 @@ func testInstructions(expected []code.Instructions, actual code.Instructions) er
 
 	for i, ins := range concatted {
 		if actual[i] != ins {
-			return fmt.Errorf("wrong instruction at %d.\nwant=%q\ngot=%q", i, concatted, actual)
+			return fmt.Errorf("wrong instruction at %d.\nwant\n%s\ngot\n%s", i, concatted, actual)
 		}
 	}
 
@@ -84,9 +84,27 @@ func testConstants(t *testing.T, expected []any, actual []value.Value) error {
 		case int:
 			err := testIntegerValue(int64(constant), actual[i])
 			if err != nil {
-				return fmt.Errorf("constant %d = testIntegerValue failed: %s", i, err)
+				return fmt.Errorf("constant %d - testIntegerValue failed: %s", i, err)
+			}
+		case string:
+			err := testStringValue(constant, actual[i])
+			if err != nil {
+				return fmt.Errorf("constant %d - testStringValue failed: %s", i, err)
 			}
 		}
+	}
+
+	return nil
+}
+
+func testStringValue(expected string, actual value.Value) error {
+	result, ok := actual.(*value.String)
+	if !ok {
+		return fmt.Errorf("value is not String. got=%T (%+v)", actual, actual)
+	}
+
+	if result.Value != expected {
+		return fmt.Errorf("value has wrong value. got=%q, want=%q", result.Value, expected)
 	}
 
 	return nil
@@ -311,6 +329,123 @@ func TestGlobalLetStatements(t *testing.T) {
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpSetGlobal, 0),
 				code.Make(code.OpGetGlobal, 0),
+				code.Make(code.OpPop),
+			},
+		},
+	}
+
+	runCompilerTests(t, tests)
+}
+
+func TestStringExpressions(t *testing.T) {
+	tests := []compilerTestcase{
+		{
+			input:             `"monkey"`,
+			expectedConstants: []any{"monkey"},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpPop),
+			},
+		},
+
+		{
+			input:             `"mon" + "key"`,
+			expectedConstants: []any{"mon", "key"},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpAdd),
+				code.Make(code.OpPop),
+			},
+		},
+	}
+
+	runCompilerTests(t, tests)
+}
+
+func TestArrayLiterals(t *testing.T) {
+	tests := []compilerTestcase{
+		{
+			input:             "[]",
+			expectedConstants: []any{},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpArray, 0),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:             "[1, 3 - 4, 5 * 6]",
+			expectedConstants: []any{1, 3, 4, 5, 6},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpConstant, 2),
+				code.Make(code.OpSub),
+				code.Make(code.OpConstant, 3),
+				code.Make(code.OpConstant, 4),
+				code.Make(code.OpMul),
+				code.Make(code.OpArray, 3), // 3 elements in the array
+				code.Make(code.OpPop),
+			},
+		},
+	}
+
+	runCompilerTests(t, tests)
+}
+
+func TestHashLiterals(t *testing.T) {
+	tests := []compilerTestcase{
+		{
+			input:             "{}",
+			expectedConstants: []any{},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpHash, 0),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:             `{"a": 2, "b": 3}`,
+			expectedConstants: []any{"a", 2, "b", 3},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpConstant, 2),
+				code.Make(code.OpConstant, 3),
+				code.Make(code.OpHash, 4),
+				code.Make(code.OpPop),
+			},
+		},
+	}
+
+	runCompilerTests(t, tests)
+}
+
+func TestIndexExpressions(t *testing.T) {
+	tests := []compilerTestcase{
+		{
+			input:             "[1,2,3][1+1]",
+			expectedConstants: []any{1, 2, 3, 1, 1},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpConstant, 2),
+				code.Make(code.OpArray, 3),
+				code.Make(code.OpConstant, 3),
+				code.Make(code.OpConstant, 4),
+				code.Make(code.OpAdd),
+				code.Make(code.OpIndex),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:             `{"a": 1}["a"]`,
+			expectedConstants: []any{"a", 1, "a"},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpHash, 2),
+				code.Make(code.OpConstant, 2),
+				code.Make(code.OpIndex),
 				code.Make(code.OpPop),
 			},
 		},

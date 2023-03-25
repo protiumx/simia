@@ -137,21 +137,102 @@ func (vm *VM) Run() error {
 			if err != nil {
 				return err
 			}
+
+		case code.OpArray:
+			numElements := int(code.ReadUint16(vm.instructions[ip+1:]))
+			ip += 2
+
+			arr := vm.buildArray(vm.sp-numElements, vm.sp)
+			vm.sp = vm.sp - numElements
+
+			err := vm.push(arr)
+			if err != nil {
+				return err
+			}
+
+		case code.OpHash:
+			numElements := int(code.ReadUint16(vm.instructions[ip+1:]))
+			ip += 2
+
+			hash, err := vm.buildHash(vm.sp-numElements, vm.sp)
+			if err != nil {
+				return err
+			}
+
+			vm.sp = vm.sp - numElements
+			err = vm.push(hash)
+			if err != nil {
+				return err
+			}
+		case code.OpIndex:
+			index := vm.pop()
+			left := vm.pop()
+			err := vm.execIndexExpression(left, index)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
+func (vm *VM) buildHash(startIndex, endIndex int) (value.Value, error) {
+	hash := &value.Hash{}
+	hash.Pairs = make(map[string]value.Value)
+
+	for i := startIndex; i < endIndex; i += 2 {
+		k := vm.stack[i]
+		v := vm.stack[i+1]
+
+		key, ok := k.(*value.String)
+		if !ok {
+			return nil, fmt.Errorf("unusable hash key: %s", k.Type())
+		}
+
+		hash.Pairs[key.Value] = v
+	}
+
+	return hash, nil
+}
+
+func (vm *VM) buildArray(startIndex, endIndex int) value.Value {
+	elements := make([]value.Value, endIndex-startIndex)
+
+	for i := startIndex; i < endIndex; i++ {
+		elements[i-startIndex] = vm.stack[i]
+
+	}
+
+	return &value.Array{Elements: elements}
+}
+
 func (vm *VM) execBinaryOp(op code.Opcode) error {
 	right := vm.pop()
 	left := vm.pop()
 
-	if left.Type() == value.INTEGER_VALUE && right.Type() == value.INTEGER_VALUE {
-		return vm.execBinaryIntegerOp(op, left, right)
+	switch left.Type() {
+	case value.INTEGER_VALUE:
+		if right.Type() == value.INTEGER_VALUE {
+			return vm.execBinaryIntegerOp(op, left, right)
+		}
+
+	case value.STRING_VALUE:
+		if right.Type() == value.STRING_VALUE {
+			return vm.execBinaryStringOp(op, left, right)
+		}
 	}
 
 	return fmt.Errorf("unsupported types for binary operation: %s %d %s", left.Type(), op, right.Type())
+}
+
+func (vm *VM) execBinaryStringOp(op code.Opcode, left, right value.Value) error {
+	if op != code.OpAdd {
+		return fmt.Errorf("unknown string operation: %d", op)
+	}
+
+	l, r := left.(*value.String).Value, right.(*value.String).Value
+	return vm.push(&value.String{Value: l + r})
 }
 
 func (vm *VM) execBinaryIntegerOp(op code.Opcode, left, right value.Value) error {
@@ -216,6 +297,39 @@ func (vm *VM) execBangOperator() error {
 	default:
 		return fmt.Errorf("unkown operand %s for Bang operator", operand.Type())
 	}
+}
+
+func (vm *VM) execIndexExpression(left, index value.Value) error {
+	switch {
+	case left.Type() == value.ARRAY_VALUE && index.Type() == value.INTEGER_VALUE:
+		return vm.execArrayIndex(left, index)
+	case left.Type() == value.HASH_VALUE && index.Type() == value.STRING_VALUE:
+		return vm.execHashIndex(left, index)
+	default:
+		return fmt.Errorf("index operator not supported: %s", left.Type())
+	}
+}
+
+func (vm *VM) execArrayIndex(array, index value.Value) error {
+	arr := array.(*value.Array)
+	i := index.(*value.Integer).Value
+	max := int64(len(arr.Elements) - 1)
+	if i < 0 || i > max {
+		return vm.push(Nil)
+	}
+
+	return vm.push(arr.Elements[i])
+}
+
+func (vm *VM) execHashIndex(hashValue, index value.Value) error {
+	hash := hashValue.(*value.Hash)
+	key := index.(*value.String)
+	pair, ok := hash.Pairs[key.Value]
+	if !ok {
+		return vm.push(Nil)
+	}
+
+	return vm.push(pair)
 }
 
 func (vm *VM) execMinusOperator() error {

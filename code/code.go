@@ -70,6 +70,11 @@ const (
 	OpGetGlobal
 	OpSetGlobal
 
+	OpArray
+	OpHash
+
+	OpIndex
+
 	OpNil
 )
 
@@ -79,7 +84,7 @@ type Definition struct {
 }
 
 var definitions = map[Opcode]*Definition{
-	OpConstant:     {"OpConstant", []int{2}}, // Const has size uint16 (2bytes)
+	OpConstant:     {"OpConstant", []int{2}}, // Const has size uint16 (2 bytes wide)
 	OpAdd:          {"OpAdd", []int{}},
 	OpPop:          {"OpPop", []int{}},
 	OpSub:          {"OpSub", []int{}},
@@ -97,6 +102,9 @@ var definitions = map[Opcode]*Definition{
 	OpNil:          {"OpNil", []int{}},
 	OpGetGlobal:    {"OpGetGlobal", []int{2}},
 	OpSetGlobal:    {"OpSetGlobal", []int{2}},
+	OpArray:        {"OpArray", []int{2}},
+	OpHash:         {"OpHash", []int{2}},
+	OpIndex:        {"OpIndex", []int{}},
 }
 
 func Lookup(op byte) (*Definition, error) {
@@ -147,7 +155,6 @@ func ReadOperands(def *Definition, ins Instructions) ([]int, int) {
 
 		offset += w
 	}
-
 	return operands, offset
 }
 

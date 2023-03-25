@@ -59,11 +59,66 @@ func testExpectedValue(t *testing.T, expected any, actual value.Value) {
 		if err != nil {
 			t.Errorf("test bool value failed: %s", err)
 		}
+	case string:
+		err := testStringValue(expected, actual)
+		if err != nil {
+			t.Errorf("test string value failed: %s", err)
+		}
+	case []int:
+		arr, ok := actual.(*value.Array)
+		if !ok {
+			t.Errorf("value is not Array: %T (%+v)", actual, actual)
+			return
+		}
+
+		if len(arr.Elements) != len(expected) {
+			t.Errorf("wrong num of elements. want=%d, got=%d", len(expected), len(arr.Elements))
+			return
+		}
+
+		for i, expElement := range expected {
+			err := testIntegerValue(int64(expElement), arr.Elements[i])
+			if err != nil {
+				t.Errorf("testIntegerValue failed: %s", err)
+			}
+		}
+
+	case map[string]int64:
+		h, ok := actual.(*value.Hash)
+		if !ok {
+			t.Errorf("value is not Hash. got=%T (%+v)", actual, actual)
+			return
+		}
+		if len(h.Pairs) != len(expected) {
+			t.Errorf("hash has wrong number of pairs. want=%d, got=%d", len(expected), len(h.Pairs))
+			return
+		}
+
+		for k, v := range expected {
+			err := testIntegerValue(v, h.Pairs[k])
+			if err != nil {
+				t.Errorf("testIntegerValue failed: %s", err)
+			}
+		}
+
 	case *value.Nil:
 		if actual != Nil {
 			t.Errorf("test nil is not Nil: %T (%+v)", actual, actual)
 		}
 	}
+}
+
+func testStringValue(expected string, actual value.Value) error {
+	s, ok := actual.(*value.String)
+	if !ok {
+		return fmt.Errorf("value is not String. got=%T (%+v)", actual, actual)
+	}
+
+	if s.Value != expected {
+		return fmt.Errorf("string has wrong value. got=%q, want=%q", s.Value, expected)
+	}
+
+	return nil
 }
 
 func testIntegerValue(expected int64, actual value.Value) error {
@@ -138,6 +193,55 @@ func TestGlobalLetStatements(t *testing.T) {
 	tests := []vmTestCase{
 		{"let one = 1; one;", 1},
 		{"let one = 1; let two = 2; one + two;", 3},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestStringExpressions(t *testing.T) {
+	tests := []vmTestCase{
+		{`"monkey"`, "monkey"},
+		{`"mon" + "key"`, "monkey"},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestArrayLiterals(t *testing.T) {
+	tests := []vmTestCase{
+		{"[]", []int{}},
+		{"[1 - 2, 3 * 4]", []int{-1, 12}},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestHashListerals(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			"{}", map[string]int64{},
+		},
+		{
+
+			`{"a": 1 * 2, "b": 2+6}`,
+			map[string]int64{
+				"a": 2,
+				"b": 8,
+			},
+		},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestIndexExpression(t *testing.T) {
+	tests := []vmTestCase{
+		{"[1, 2, 3][1]", 2},
+		{"[1, 2, 3][0 + 2]", 3},
+		{"[[1, 2], 3][0][0]", 1},
+		{"[][0]", Nil},
+		{`{"a": false }["a"]`, False},
+		{`{}["a"]`, Nil},
 	}
 
 	runVmTests(t, tests)
