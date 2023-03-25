@@ -164,6 +164,13 @@ func (vm *VM) Run() error {
 			if err != nil {
 				return err
 			}
+		case code.OpIndex:
+			index := vm.pop()
+			left := vm.pop()
+			err := vm.execIndexExpression(left, index)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -290,6 +297,39 @@ func (vm *VM) execBangOperator() error {
 	default:
 		return fmt.Errorf("unkown operand %s for Bang operator", operand.Type())
 	}
+}
+
+func (vm *VM) execIndexExpression(left, index value.Value) error {
+	switch {
+	case left.Type() == value.ARRAY_VALUE && index.Type() == value.INTEGER_VALUE:
+		return vm.execArrayIndex(left, index)
+	case left.Type() == value.HASH_VALUE && index.Type() == value.STRING_VALUE:
+		return vm.execHashIndex(left, index)
+	default:
+		return fmt.Errorf("index operator not supported: %s", left.Type())
+	}
+}
+
+func (vm *VM) execArrayIndex(array, index value.Value) error {
+	arr := array.(*value.Array)
+	i := index.(*value.Integer).Value
+	max := int64(len(arr.Elements) - 1)
+	if i < 0 || i > max {
+		return vm.push(Nil)
+	}
+
+	return vm.push(arr.Elements[i])
+}
+
+func (vm *VM) execHashIndex(hashValue, index value.Value) error {
+	hash := hashValue.(*value.Hash)
+	key := index.(*value.String)
+	pair, ok := hash.Pairs[key.Value]
+	if !ok {
+		return vm.push(Nil)
+	}
+
+	return vm.push(pair)
 }
 
 func (vm *VM) execMinusOperator() error {
