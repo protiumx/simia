@@ -10,3 +10,5 @@
 bin/
 cmd/wasm/js/wasm_exec.js
 cmd/wasm/*.wasm
+
+*.vim
