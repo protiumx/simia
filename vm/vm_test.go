@@ -246,3 +246,48 @@ func TestIndexExpression(t *testing.T) {
 
 	runVmTests(t, tests)
 }
+
+func TestCallingFunction(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+      let sumFive = fn() { 4 + 1 };
+      sumFive();
+      `,
+			expected: 5,
+		},
+		{
+			input: `
+      let five = fn() { 4 + 1 };
+      let a = fn() { five() + 1};
+      let b = fn() { a() + 1 };
+      b();
+      `,
+			expected: 7,
+		},
+		{
+			input: `
+      let earlyReturn = fn() { return 1; 100; };
+      earlyReturn();
+      `,
+			expected: 1,
+		},
+		{
+			input: `
+      let noReturn = fn() { };
+      noReturn()
+      `,
+			expected: Nil,
+		},
+		{
+			input: `
+      let a = fn() { 1; };
+      let b = fn() { a; };
+      b()()
+      `,
+			expected: 1,
+		},
+	}
+
+	runVmTests(t, tests)
+}
