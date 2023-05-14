@@ -188,15 +188,14 @@ func (vm *VM) Run() error {
 				return err
 			}
 		case code.OpCall:
-			fn, ok := vm.stack[vm.sp-1].(*value.CompiledFunction)
-			if !ok {
-				return fmt.Errorf("calling non-function")
+			argsCount := code.ReadUint8(ins[ip+1:])
+			vm.currentFrame().ip += 1
+
+			err := vm.callFunction(int(argsCount))
+			if err != nil {
+				return err
 			}
 
-			frame := NewFrame(fn, vm.sp)
-			vm.pushFrame(frame)
-			// create space for function locals
-			vm.sp = frame.basePointer + fn.LocalsCount
 		case code.OpReturnValue:
 			returnValue := vm.pop()
 			// pop frame and current function that's being executed
@@ -235,6 +234,23 @@ func (vm *VM) Run() error {
 		}
 	}
 
+	return nil
+}
+
+func (vm *VM) callFunction(argsCount int) error {
+	fn, ok := vm.stack[vm.sp-1-argsCount].(*value.CompiledFunction)
+	if !ok {
+		return fmt.Errorf("calling non-function")
+	}
+
+	if argsCount != fn.ArgumentsCount {
+		return fmt.Errorf("wrong number of arguments: want=%d, got=%d", fn.ArgumentsCount, argsCount)
+	}
+
+	frame := NewFrame(fn, vm.sp-argsCount)
+	vm.pushFrame(frame)
+	// create space for function locals
+	vm.sp = frame.basePointer + fn.LocalsCount
 	return nil
 }
 

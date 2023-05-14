@@ -209,8 +209,9 @@ func (r *Range) Inspect() string {
 }
 
 type CompiledFunction struct {
-	Instructions code.Instructions
-	LocalsCount  int
+	Instructions   code.Instructions
+	LocalsCount    int
+	ArgumentsCount int
 }
 
 func (cf *CompiledFunction) Type() ValueType {
