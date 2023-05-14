@@ -210,6 +210,7 @@ func (r *Range) Inspect() string {
 
 type CompiledFunction struct {
 	Instructions code.Instructions
+	LocalsCount  int
 }
 
 func (cf *CompiledFunction) Type() ValueType {

@@ -291,3 +291,60 @@ func TestCallingFunction(t *testing.T) {
 
 	runVmTests(t, tests)
 }
+
+func TestCallingFunctionsWithBindings(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+			let one = fn() { let one = 1; one };
+			one();
+			`,
+			expected: 1,
+		},
+		{
+			input: `
+			let test = fn() {
+				let a = 1;
+				let b = 2;
+				a + b
+			};
+			test();
+			`,
+			expected: 3,
+		},
+		{
+			input: `
+			let a = fn() { let foo = 10; foo; }
+			let b = fn() { let foo = 100; foo; }
+			a() + b();
+			`,
+			expected: 110,
+		},
+		{
+			input: `
+			let global = 100;
+			let a = fn() {
+				let num = 1;
+				global - num;
+			}
+			let b = fn() {
+				let num = 2;
+				global - num;
+			}
+			a() + b();
+			`,
+			expected: 197,
+		},
+		{
+			input: `
+			let a = fn() {
+				let b = fn () { 1; }
+				b;
+			}
+			a()()
+			`,
+			expected: 1,
+		},
+	}
+	runVmTests(t, tests)
+}
