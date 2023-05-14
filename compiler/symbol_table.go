@@ -2,7 +2,10 @@ package compiler
 
 type SymbolScope string
 
-const GlobalScope SymbolScope = "GLOBAL"
+const (
+	GlobalScope SymbolScope = "GLOBAL"
+	LocalScope  SymbolScope = "LOCAL"
+)
 
 type Symbol struct {
 	Name  string
@@ -11,8 +14,10 @@ type Symbol struct {
 }
 
 type SymbolTable struct {
-	store          map[string]Symbol
-	numDefinitions int
+	Outer *SymbolTable
+
+	store       map[string]Symbol
+	definitions int
 }
 
 func NewSymbolTable() *SymbolTable {
@@ -20,14 +25,30 @@ func NewSymbolTable() *SymbolTable {
 	return &SymbolTable{store: s}
 }
 
+func NewEnclosedSymbolTable(outer *SymbolTable) *SymbolTable {
+	s := NewSymbolTable()
+	s.Outer = outer
+	return s
+}
+
 func (t *SymbolTable) Define(name string) Symbol {
-	s := Symbol{name, GlobalScope, t.numDefinitions}
+	s := Symbol{name, GlobalScope, t.definitions}
+	if t.Outer == nil {
+		s.Scope = GlobalScope
+	} else {
+		s.Scope = LocalScope
+	}
+
 	t.store[name] = s
-	t.numDefinitions++
+	t.definitions++
 	return s
 }
 
 func (t *SymbolTable) Resolve(name string) (Symbol, bool) {
 	s, ok := t.store[name]
+	if !ok && t.Outer != nil {
+		s, ok = t.Outer.Resolve(name)
+		return s, ok
+	}
 	return s, ok
 }

@@ -246,3 +246,184 @@ func TestIndexExpression(t *testing.T) {
 
 	runVmTests(t, tests)
 }
+
+func TestCallingFunction(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+      let sumFive = fn() { 4 + 1 };
+      sumFive();
+      `,
+			expected: 5,
+		},
+		{
+			input: `
+      let five = fn() { 4 + 1 };
+      let a = fn() { five() + 1};
+      let b = fn() { a() + 1 };
+      b();
+      `,
+			expected: 7,
+		},
+		{
+			input: `
+      let earlyReturn = fn() { return 1; 100; };
+      earlyReturn();
+      `,
+			expected: 1,
+		},
+		{
+			input: `
+      let noReturn = fn() { };
+      noReturn()
+      `,
+			expected: Nil,
+		},
+		{
+			input: `
+      let a = fn() { 1; };
+      let b = fn() { a; };
+      b()()
+      `,
+			expected: 1,
+		},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestCallingFunctionsWithBindings(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+			let one = fn() { let one = 1; one };
+			one();
+			`,
+			expected: 1,
+		},
+		{
+			input: `
+			let test = fn() {
+				let a = 1;
+				let b = 2;
+				a + b
+			};
+			test();
+			`,
+			expected: 3,
+		},
+		{
+			input: `
+			let a = fn() { let foo = 10; foo; }
+			let b = fn() { let foo = 100; foo; }
+			a() + b();
+			`,
+			expected: 110,
+		},
+		{
+			input: `
+			let global = 100;
+			let a = fn() {
+				let num = 1;
+				global - num;
+			}
+			let b = fn() {
+				let num = 2;
+				global - num;
+			}
+			a() + b();
+			`,
+			expected: 197,
+		},
+		{
+			input: `
+			let a = fn() {
+				let b = fn () { 1; }
+				b;
+			}
+			a()()
+			`,
+			expected: 1,
+		},
+	}
+	runVmTests(t, tests)
+}
+
+func TestCallingFunctionsWithArguments(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+			let identity = fn(a) { a };
+			identity(0);
+			`,
+			expected: 0,
+		},
+		{
+			input: `
+			let sum = fn(a, b) { a + b };
+			sum(1, 2);
+			`,
+			expected: 3,
+		},
+		{
+			input: `
+			let sum = fn(a, b) {
+				let c = a + b;
+				c;
+			}
+			sum(1, 2);
+			`,
+			expected: 3,
+		},
+		{
+			input: `
+			let global = 100;
+
+			let sum = fn(a, b) {
+				let c = a + b;
+				c + global;
+			}
+
+			let test = fn() {
+				sum(1,2) + sum(3,4);
+			}
+			test();
+			`,
+			expected: 210,
+		},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestFunctionCallErrors(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input:    `fn() {}(1);`,
+			expected: "wrong number of arguments: want=0, got=1",
+		},
+		{
+			input:    `fn(a, b) {}(1);`,
+			expected: "wrong number of arguments: want=2, got=1",
+		},
+	}
+
+	for _, tt := range tests {
+		program := parse(tt.input)
+		comp := compiler.New()
+		err := comp.Compile(program)
+		if err != nil {
+			t.Fatalf("compiler error: %s", err)
+		}
+
+		vm := New(comp.Bytecode())
+		err = vm.Run()
+		if err == nil {
+			t.Fatalf("expected VM error")
+		}
+
+		if err.Error() != tt.expected {
+			t.Fatalf("wrong VM error. want=%q, got=%q", tt.expected, err)
+		}
+	}
+}

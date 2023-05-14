@@ -5,22 +5,24 @@ import (
 	"strings"
 
 	"protiumx.dev/simia/ast"
+	"protiumx.dev/simia/code"
 )
 
 type ValueType string
 
 const (
-	INTEGER_VALUE  ValueType = "INTEGER"
-	STRING_VALUE             = "STRING"
-	BOOLEAN_VALUE            = "BOOLEAN"
-	NIL_VALUE                = "NIL"
-	RETURN_VALUE             = "RETURN"
-	ERROR_VALUE              = "ERROR"
-	FUNCTION_VALUE           = "FN"
-	BUILTIN_VALUE            = "BUILTIN"
-	ARRAY_VALUE              = "ARRAY"
-	HASH_VALUE               = "HASH"
-	RANGE_VALUE              = "RANGE"
+	INTEGER_VALUE           ValueType = "INTEGER"
+	STRING_VALUE                      = "STRING"
+	BOOLEAN_VALUE                     = "BOOLEAN"
+	NIL_VALUE                         = "NIL"
+	RETURN_VALUE                      = "RETURN"
+	ERROR_VALUE                       = "ERROR"
+	FUNCTION_VALUE                    = "FN"
+	COMPILED_FUNCTION_VALUE           = "COMPILED_FUNCTION_VALUE"
+	BUILTIN_VALUE                     = "BUILTIN"
+	ARRAY_VALUE                       = "ARRAY"
+	HASH_VALUE                        = "HASH"
+	RANGE_VALUE                       = "RANGE"
 	// For expressions that do not return a value
 	EMPTY_VALUE = "EMPTY"
 )
@@ -204,4 +206,18 @@ func (r *Range) Inspect() string {
 	out.WriteString(fmt.Sprintf("%d", r.End))
 	out.WriteString("]")
 	return out.String()
+}
+
+type CompiledFunction struct {
+	Instructions   code.Instructions
+	LocalsCount    int
+	ArgumentsCount int
+}
+
+func (cf *CompiledFunction) Type() ValueType {
+	return COMPILED_FUNCTION_VALUE
+}
+
+func (cf *CompiledFunction) Inspect() string {
+	return fmt.Sprintf("CompiledFunction[%p]", cf)
 }
