@@ -438,8 +438,14 @@ func applyFunction(fnValue value.Value, args []value.Value) value.Value {
 		fnEnv := extendFunctionEnv(fn, args)
 		evaluated := Eval(fn.Body, fnEnv)
 		return unwrapReturnValue(evaluated)
+
 	case *value.Builtin:
-		return fn.Fn(args...)
+		if result := fn.Fn(args...); result != nil {
+			return result
+		}
+
+		return NIL
+
 	default:
 		return newError("not a function: %s", fnValue.Type())
 	}
