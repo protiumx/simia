@@ -22,7 +22,7 @@ func parse(input string) *ast.Program {
 	return p.ParseProgram()
 }
 
-func runVmTests(t *testing.T, tests []vmTestCase) {
+func runVMTests(t *testing.T, tests []vmTestCase) {
 	t.Helper()
 
 	for _, tt := range tests {
@@ -105,6 +105,17 @@ func testExpectedValue(t *testing.T, expected any, actual value.Value) {
 		if actual != Nil {
 			t.Errorf("test nil is not Nil: %T (%+v)", actual, actual)
 		}
+
+	case *value.Error:
+		errValue, ok := actual.(*value.Error)
+		if !ok {
+			t.Errorf("value is not Error: %T (%+v)", actual, actual)
+			return
+		}
+
+		if errValue.Message != expected.Message {
+			t.Errorf("wrong error message. expected=%q, got=%q", expected.Message, errValue.Message)
+		}
 	}
 }
 
@@ -156,7 +167,7 @@ func TestIntegerAithmetic(t *testing.T) {
 		{"-50 + 100 + -50", 0},
 	}
 
-	runVmTests(t, tests)
+	runVMTests(t, tests)
 }
 
 func TestBooleanExpressions(t *testing.T) {
@@ -173,7 +184,7 @@ func TestBooleanExpressions(t *testing.T) {
 		{"!!false", false},
 	}
 
-	runVmTests(t, tests)
+	runVMTests(t, tests)
 }
 
 func TestConditionals(t *testing.T) {
@@ -186,7 +197,7 @@ func TestConditionals(t *testing.T) {
 		{"if (if false { 10 }) { 10 } else { 20 }", 20},
 	}
 
-	runVmTests(t, tests)
+	runVMTests(t, tests)
 }
 
 func TestGlobalLetStatements(t *testing.T) {
@@ -195,7 +206,7 @@ func TestGlobalLetStatements(t *testing.T) {
 		{"let one = 1; let two = 2; one + two;", 3},
 	}
 
-	runVmTests(t, tests)
+	runVMTests(t, tests)
 }
 
 func TestStringExpressions(t *testing.T) {
@@ -204,7 +215,7 @@ func TestStringExpressions(t *testing.T) {
 		{`"mon" + "key"`, "monkey"},
 	}
 
-	runVmTests(t, tests)
+	runVMTests(t, tests)
 }
 
 func TestArrayLiterals(t *testing.T) {
@@ -213,7 +224,7 @@ func TestArrayLiterals(t *testing.T) {
 		{"[1 - 2, 3 * 4]", []int{-1, 12}},
 	}
 
-	runVmTests(t, tests)
+	runVMTests(t, tests)
 }
 
 func TestHashListerals(t *testing.T) {
@@ -231,7 +242,7 @@ func TestHashListerals(t *testing.T) {
 		},
 	}
 
-	runVmTests(t, tests)
+	runVMTests(t, tests)
 }
 
 func TestIndexExpression(t *testing.T) {
@@ -244,7 +255,7 @@ func TestIndexExpression(t *testing.T) {
 		{`{}["a"]`, Nil},
 	}
 
-	runVmTests(t, tests)
+	runVMTests(t, tests)
 }
 
 func TestCallingFunction(t *testing.T) {
@@ -289,7 +300,7 @@ func TestCallingFunction(t *testing.T) {
 		},
 	}
 
-	runVmTests(t, tests)
+	runVMTests(t, tests)
 }
 
 func TestCallingFunctionsWithBindings(t *testing.T) {
@@ -346,7 +357,7 @@ func TestCallingFunctionsWithBindings(t *testing.T) {
 			expected: 1,
 		},
 	}
-	runVmTests(t, tests)
+	runVMTests(t, tests)
 }
 
 func TestCallingFunctionsWithArguments(t *testing.T) {
@@ -393,7 +404,7 @@ func TestCallingFunctionsWithArguments(t *testing.T) {
 		},
 	}
 
-	runVmTests(t, tests)
+	runVMTests(t, tests)
 }
 
 func TestFunctionCallErrors(t *testing.T) {
@@ -426,4 +437,19 @@ func TestFunctionCallErrors(t *testing.T) {
 			t.Fatalf("wrong VM error. want=%q, got=%q", tt.expected, err)
 		}
 	}
+}
+
+func TestBuiltinFunctions(t *testing.T) {
+	tests := []vmTestCase{
+		{`len("")`, 0},
+		{`len("1234")`, 4},
+		{`len(0)`, &value.Error{Message: "argument to `len` not supported, got INTEGER"}},
+		{`len(1,2)`, &value.Error{Message: "wrong number of arguments. got=2, want=1"}},
+		{`len([1])`, 1},
+		{`log("test")`, Nil},
+		{`append([], 1)`, []int{1}},
+		{`append(1, 1)`, &value.Error{Message: "argument must be ARRAY, got INTEGER"}},
+	}
+
+	runVMTests(t, tests)
 }
