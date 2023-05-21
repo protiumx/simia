@@ -191,7 +191,7 @@ func (vm *VM) Run() error {
 			argsCount := code.ReadUint8(ins[ip+1:])
 			vm.currentFrame().ip += 1
 
-			err := vm.callFunction(int(argsCount))
+			err := vm.executeCall(int(argsCount))
 			if err != nil {
 				return err
 			}
@@ -231,18 +231,50 @@ func (vm *VM) Run() error {
 			if err != nil {
 				return err
 			}
+
+		case code.OpGetBuiltin:
+			index := code.ReadUint8(ins[ip+1:])
+			vm.currentFrame().ip += 1
+
+			definition := value.Builtins[index]
+
+			err := vm.push(definition.Builtin)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func (vm *VM) callFunction(argsCount int) error {
-	fn, ok := vm.stack[vm.sp-1-argsCount].(*value.CompiledFunction)
-	if !ok {
+func (vm *VM) executeCall(argsCount int) error {
+	callee := vm.stack[vm.sp-1-argsCount]
+	switch callee := callee.(type) {
+	case *value.CompiledFunction:
+		return vm.callFunction(callee, argsCount)
+	case *value.Builtin:
+		return vm.callBuiltin(callee, argsCount)
+	default:
 		return fmt.Errorf("calling non-function")
 	}
+}
 
+func (vm *VM) callBuiltin(builtin *value.Builtin, argsCount int) error {
+	args := vm.stack[vm.sp-argsCount : vm.sp]
+	result := builtin.Fn(args...)
+	vm.sp = vm.sp - argsCount - 1
+
+	if result != nil {
+		vm.push(result)
+	} else {
+		vm.push(Nil)
+	}
+
+	return nil
+}
+
+func (vm *VM) callFunction(fn *value.CompiledFunction, argsCount int) error {
 	if argsCount != fn.ArgumentsCount {
 		return fmt.Errorf("wrong number of arguments: want=%d, got=%d", fn.ArgumentsCount, argsCount)
 	}
