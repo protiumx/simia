@@ -31,7 +31,8 @@ type VM struct {
 
 func New(bytecode *compiler.Bytecode) *VM {
 	mainFn := &value.CompiledFunction{Instructions: bytecode.Instructions}
-	mainFrame := NewFrame(mainFn, 0)
+	mainClosure := &value.Closure{Fn: mainFn}
+	mainFrame := NewFrame(mainClosure, 0)
 
 	frames := make([]*Frame, MaxFrames)
 	frames[0] = mainFrame
@@ -242,6 +243,35 @@ func (vm *VM) Run() error {
 			if err != nil {
 				return err
 			}
+
+		case code.OpGetFree:
+			freeIndex := code.ReadUint8(ins[ip+1:])
+			vm.currentFrame().ip += 1
+
+			currentClosure := vm.currentFrame().cl
+			err := vm.push(currentClosure.Free[freeIndex])
+
+			if err != nil {
+				return err
+			}
+
+		case code.OpClosure:
+			constIndex := code.ReadUint16(ins[ip+1:])
+			numFree := code.ReadUint8(ins[ip+3:])
+			vm.currentFrame().ip += 3
+
+			err := vm.pushClosure(int(constIndex), int(numFree))
+			if err != nil {
+				return err
+			}
+
+		case code.OpCurrentClosure:
+			cl := vm.currentFrame().cl
+			err := vm.push(cl)
+			if err != nil {
+				return err
+			}
+
 		}
 	}
 
@@ -251,7 +281,7 @@ func (vm *VM) Run() error {
 func (vm *VM) executeCall(argsCount int) error {
 	callee := vm.stack[vm.sp-1-argsCount]
 	switch callee := callee.(type) {
-	case *value.CompiledFunction:
+	case *value.Closure:
 		return vm.callFunction(callee, argsCount)
 	case *value.Builtin:
 		return vm.callBuiltin(callee, argsCount)
@@ -274,15 +304,15 @@ func (vm *VM) callBuiltin(builtin *value.Builtin, argsCount int) error {
 	return nil
 }
 
-func (vm *VM) callFunction(fn *value.CompiledFunction, argsCount int) error {
-	if argsCount != fn.ArgumentsCount {
-		return fmt.Errorf("wrong number of arguments: want=%d, got=%d", fn.ArgumentsCount, argsCount)
+func (vm *VM) callFunction(cl *value.Closure, argsCount int) error {
+	if argsCount != cl.Fn.ArgumentsCount {
+		return fmt.Errorf("wrong number of arguments: want=%d, got=%d", cl.Fn.ArgumentsCount, argsCount)
 	}
 
-	frame := NewFrame(fn, vm.sp-argsCount)
+	frame := NewFrame(cl, vm.sp-argsCount)
 	vm.pushFrame(frame)
 	// create space for function locals
-	vm.sp = frame.basePointer + fn.LocalsCount
+	vm.sp = frame.basePointer + cl.Fn.LocalsCount
 	return nil
 }
 
@@ -298,6 +328,24 @@ func (vm *VM) pushFrame(f *Frame) {
 func (vm *VM) popFrame() *Frame {
 	vm.framesIndex--
 	return vm.frames[vm.framesIndex]
+}
+
+func (vm *VM) pushClosure(constIndex, numFree int) error {
+	constant := vm.constants[constIndex]
+	fn, ok := constant.(*value.CompiledFunction)
+	if !ok {
+		return fmt.Errorf("not a function: %+v", constant)
+	}
+
+	free := make([]value.Value, numFree)
+	for i := 0; i < numFree; i++ {
+		free[i] = vm.stack[vm.sp-numFree+i]
+	}
+	// cleanup stack
+	vm.sp = vm.sp - numFree
+
+	closure := &value.Closure{Fn: fn, Free: free}
+	return vm.push(closure)
 }
 
 func (vm *VM) buildHash(startIndex, endIndex int) (value.Value, error) {
