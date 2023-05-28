@@ -23,6 +23,7 @@ const (
 	ARRAY_VALUE                       = "ARRAY"
 	HASH_VALUE                        = "HASH"
 	RANGE_VALUE                       = "RANGE"
+	CLOSURE_VALUE                     = "CLOSURE"
 	// For expressions that do not return a value
 	EMPTY_VALUE = "EMPTY"
 )
@@ -220,4 +221,16 @@ func (cf *CompiledFunction) Type() ValueType {
 
 func (cf *CompiledFunction) Inspect() string {
 	return fmt.Sprintf("CompiledFunction[%p]", cf)
+}
+
+type Closure struct {
+	Fn   *CompiledFunction
+	Free []Value
+}
+
+func (*Closure) Type() ValueType {
+	return CLOSURE_VALUE
+}
+func (c *Closure) Inspect() (_ string) {
+	return fmt.Sprintf("Closure[%p]", c)
 }
