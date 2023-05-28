@@ -33,6 +33,19 @@ func runVMTests(t *testing.T, tests []vmTestCase) {
 			t.Fatalf("compiler error: %s", err)
 		}
 
+		for i, constant := range comp.Bytecode().Constants {
+			fmt.Printf("CONSTANT %d %p (%T):\n", i, constant, constant)
+
+			switch constant := constant.(type) {
+			case *value.CompiledFunction:
+				fmt.Printf(" Instructions\n%s", constant.Instructions)
+			case *value.Integer:
+				fmt.Printf(" Value: %d\n", constant.Value)
+			}
+
+			fmt.Println("")
+		}
+
 		vm := New(comp.Bytecode())
 		err = vm.Run()
 		if err != nil {
@@ -449,6 +462,93 @@ func TestBuiltinFunctions(t *testing.T) {
 		{`log("test")`, Nil},
 		{`append([], 1)`, []int{1}},
 		{`append(1, 1)`, &value.Error{Message: "argument must be ARRAY, got INTEGER"}},
+	}
+
+	runVMTests(t, tests)
+}
+
+func TestClosures(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+			let newClosure = fn(a) {
+				fn() { a; };
+			}
+			let closure = newClosure(99)
+			closure();
+			`,
+			expected: 99,
+		},
+		{
+			input: `
+			let adder = fn(a, b) {
+				fn(c) { a + b + c };
+			}
+			adder(1, 2)(3);
+			`,
+			expected: 6,
+		},
+		{
+			input: `
+			let global = 100
+			let adder = fn(a, b, f) {
+				let inner = fn () { a + b }
+				fn(c) { 
+					let sum = f(global) + inner() + c
+					sum + global
+				};
+			}
+			adder(1, 2, fn(g) { g / 10})(3);
+			`,
+			expected: 116,
+		},
+	}
+
+	runVMTests(t, tests)
+}
+
+func TestRecursiveClosure(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+			let count_down = fn(x) {
+				if x == 0 {
+					return 0
+				}
+				return count_down(x - 1)
+			}
+			count_down(1);
+			`,
+			expected: 0,
+		},
+		{
+			input: `
+			let count_down = fn(x) {
+				if x == 0 {
+					return 0
+				}
+				return count_down(x - 1)
+			}
+			let wrapper = fn() { count_down(1) }
+			wrapper()
+			`,
+			expected: 0,
+		},
+		{
+			input: `
+			let wrapper = fn() {
+				let count_down = fn(x) {
+					if x == 0 {
+						return 0
+					}
+					return count_down(x - 1)
+				}
+				count_down(1)
+			}
+			wrapper();
+			`,
+			expected: 0,
+		},
 	}
 
 	runVMTests(t, tests)

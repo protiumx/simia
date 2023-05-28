@@ -1072,3 +1072,31 @@ func TestParseAssignExpression(t *testing.T) {
 		}
 	}
 }
+
+func TestFunctionLiteralWithName(t *testing.T) {
+	input := `let f = fn() {};`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Body does not contain 1 statement, got=%d\n", len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.LetStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not *ast.LetStatement, got=%T", program.Statements[0])
+	}
+
+	fn, ok := stmt.Value.(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("stmt.Value is not *ast.FunctionLiteral, got=%T", stmt.Value)
+	}
+
+	if fn.Name != "f" {
+		t.Fatalf("function literal name is wrong. want 'f', got=%q", fn.Name)
+	}
+
+}
